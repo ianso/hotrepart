@@ -1,0 +1,360 @@
+========release when married
+
+========actual release
+
+	initial release
+	 - fully-qualified internal non-wiki links?
+
+========after release
+		
+	adapt broad items to use run on all
+	get_cluster_partitions should return proper list,
+	 - get_cluster_version should have table behind it, inced by split_partition
+
+
+	use SELECT at PL/Proxy level to pass the function
+	to the partition without the connection string.
+	(try, records seem difficult)
+
+	load tester
+	 - how to increase & decrease rate / size @ need?
+	   - do below
+	   
+	telemetry:
+		find a way of measuring data transfer rates (MB/time)
+		find average time per operation
+		control growth rate (updates instead of writes to maintain read/write ratio)
+		control read/write ratio (change read & write freq)
+		change read/write size 
+		   (add owner offset so we can work with data of known block size in getItem/s)
+		add something to log the average time difference between write and read. (should be small)
+		and the average duration of a write and read
+
+	stuff I'd like to add to PL/Proxy
+		CONNECT $1/function
+and
+		connect select connstr from plproxy.partitions where read_start <= $1 an read_end >= $1
+or		connect select get_write_connstr(id_item);
+or		run on select connstr from plproxy.partitions where 
+
+	ec2:
+	 - cost calculator (use scale model, not simple javascripts)
+
+X	DONE
+X  - install plproxy and get that working
+X	can we add range info to queries?
+X	use testcases
+X	Next: get UUID-based schema correctly distributed
+X	table
+X	 name text
+X	p_from uuid
+X	p_to uuid
+X	connstr
+X	create or replace function get_cluster(iditem uuid) as $$
+X	select connstr from clusters where $1 >= p_from and $1 <= p_to;
+X	$$
+X	4e07f471-f58c-c16d-7767-565e4edc04ad
+X	00000000-0000-0000-0000-000000000000
+X	FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+X	  - investigate queues
+X	plproxy.xxx should have range & cluster info passed into it by public.xxx (which makes query and queues if necessary)
+X	^^^^ private.xxx
+X	private stuff should be in separate DB to proxy (hence queuing should also be in separate DB)
+X no	 - test delete WHERE CURRENT OF on dblink
+X	   - create
+X	    - queue table creation function,
+X	    - queue filling
+X no, unsupported by PL/Proxy	 - i_cluster record instead of extra arguments (also expands struct dynamically)
+X	copy last queue tables to cluster schema
+X	create or replace function add_queue_range(r_from uuid, r_to uuid) returns int as
+X	$$
+X	begin
+X		insert into queue_ranges(r_from, r_to) values(r_from, r_to);
+X		return currval('queue_ranges_id_seq');
+X	end;
+X	$$ language plpgsql;
+X noooo prob	 - investigate Python bigint maths for UUID manip.
+X	update dblink installations...
+X	move paritition control logic to proxy
+X	update clusters, metadata script...
+X	aadd metadata r_from, r_to, proxyconnstr and thisconnstr
+X	 - globally unaware of thisconnstr, and thisrange - should also have thisclusterid to point to plproxy cluster;
+X no	uuid_to and from not passed to load_queue_from
+X	get load_queue_from caller to deal with result properly.
+X	add setup_sql table, connstr table?
+X	add function to update range
+X	add function to read remote queue
+X	queue
+X	    - & reading SQL,
+X	 - test
+X	BUG proxy partition not updated
+X	select * from cluster.setup_sql
+X	delete from cluster.setup_sql where seq=10;
+X	insert into cluster.setup_sql (seq, script) values (10, $setupscript$
+X	$setupscript$);
+X	select * from cluster.metadata
+X	--partition
+X	--select * from cluster.setup_sql
+X	--select * from cluster.queue_ranges
+X	--delete from cluster.queue
+X	--delete from cluster.queue_ranges
+X	--select dblink.get_connections()
+X	export PGPASSWORD=postgres;
+X	pg_dump -U pg -h localhost sap | psql -h localhost sap2 pg  1> /dev/null
+X	44 character limit on DB size "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+X	make the create_new_database do a pg_dump -h localhost sap | psql -h localhost sap2, remove SQL...
+X	 - remove setup_sql, metadata tables
+X	move as much intelligence as possible to the proxy
+X	 - BUG metadata on original partition not updated
+X	 - BUG cluster (or any?) metadata shouldn't duplicate cluster partition ID - should come from proxy! (imagine recreating ranges...)
+X		create_new_db should be at proxy level
+X	insert into cluster.metadata values (
+X		'dbname=sap host=localhost user=pg password=postgres',
+X		'dbname=saplp host=localhost user=pg password=postgres',
+X		'00000000-0000-0000-0000-000000000000',
+X		'ffffffff-ffff-ffff-ffff-ffffffffffff',
+X		1
+X	);
+X	select ('7fffffff-ffff-ffff-ffff-ffffffffffff')
+X	ffffffffffffffffffffffffffffffff
+X	21267647932558653966460912964485513215
+X	21267647900000000000000000000000000000
+X	FFFFFFFFFFFFFFFF
+X	18446744073709551615
+X	3,4028236692093846342648111928435e+38
+X	on queue table:
+X	loopback dblink necessary
+X	cluster.add_range_queue method signature changed
+X	proxy logic changed
+X	remove metadata, cluster tables on sap
+X	todo on DB
+X yes test	ensure queue is added on the instant it's added, NOT when function completes...
+X yes test	is the "begin tran... commit" on proxy range insertion necessary?
+X	BUG dblinks don't close at the end of a exception function
+X	 - reduce number of dblinks to a minimum
+X	exception
+X	when others then
+X	for conn_toclose in coalesce(array_lower(connections,1),0) .. coalesce(array_upper(connections,1),-1) loop
+X		perform dblink.disconnect(conn);
+X	end loop;
+X	FOR i IN coalesce(array_lower(arrayvar,1),0) .. coalesce(array_upper(arrayvar,1),-1) LOOP
+X mail sent		how to call void functions on dblink?
+X	BUG get_items plproxy functions not cooperating properly
+X	get version working properly
+X	extract interface
+X	create mock
+X	test MTIV against mock
+X	 - interface for load data collection
+X	   - use collation
+X	 - add bounded fifo queue for ids & versions to update.
+X	BUG
+X	2009-01-07 00:16:49 EST CONTEXT:  SQL statement "insert into private.items (iditem, description, owner, v) values ('f13d7164-e483-8eea-230b-5960de0424a9', 'ÂŸÃ±*^U^N^âÃ
+X                         PL/pgSQL function "read_from_queue" line 18 at EXECUTE statement
+X	2009-01-07 00:42:49 EST CONTEXT:  SQL statement "
+X	insert into private.items (iditem, description, owner, v) values ('b1c5d89d-e411-eeb4-c5e3-d4cfa26adb31', $YWN0aW9uLlNoYXJlLmxhdW5jaGVk$#7yÂ±ÆP!Ã¬Â«Ã=Ã»Â¡ÃÂ f3x^Uâ¹$YWN0aW9uLlNoYXJlLmxhdW5jaGVk$, 2, 0)
+X        PL/pgSQL function "read_from_queue" line 18 at EXECUTE statement
+X	YWN0aW9uLlNoYXJlLmxhdW5jaGVk
+X	 - add exception checking & reporting (for read & update)
+X	    - extract overridden ThreadPoolExecutor, ScheduledThreadPoolExecutor,
+X	       - override afterExecute (queue for errors)
+X test	   - add updater
+X	watch out for reccurence of this
+X	2009-01-07 02:50:51 EST NOTICE:  New DB created, connstr=dbname=sa1 host=localhost user=pg password=postgres
+X	2009-01-07 02:50:52 EST NOTICE:  Connected to dbname=sa1 host=localhost user=pg password=postgres, sending queue load
+X	2009-01-07 02:50:52 EST ERROR:  Error, msg:record "call" has no field "id"
+X	2009-01-07 02:50:52 EST STATEMENT:  select cluster.read_from_queue('dbname=sa1 host=localhost user=pg password=postgres', 92)
+X	2009-01-07 02:50:52 EST ERROR:  Error, msg:sql error
+X	2009-01-07 02:50:52 EST STATEMENT:  select plproxy.split_range(35);
+X	cookie should be at beginning for writer, end for updater
+X	updater should not get item to have description - should have start cookie passed to it as well.
+X	gotcha for above error
+X	*********** exceptions:
+X	Item uuid fa7a2736-76e8-bc34-1a7a-5691689afba3 description mØC+]D"×=?,dk??ú\?à does not end with cookie íù_Àü¥Ë'<í
+X	net.ex337.sahrp.dao.SaHrbDAORuntimeException: Item uuid fa7a2736-76e8-bc34-1a7a-5691689afba3 description mØC+]D"×=?,dk??ú\?à does not end with cookie íù_Àü¥Ë'<í
+X		at net.ex337.sahrp.mtiv.SaHrbItemReader.run(SaHrbItemReader.java:74)
+X		at java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
+X		at java.util.concurrent.FutureTask$Sync.innerRun(Unknown Source)
+X		at java.util.concurrent.FutureTask.run(Unknown Source)
+X		at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(Unknown Source)
+X		at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+X		at java.lang.Thread.run(Unknown Source)
+X	Incorrect result size: expected 1, actual 0
+X	org.springframework.dao.EmptyResultDataAccessException: Incorrect result size: expected 1, actual 0
+X		at org.springframework.dao.support.DataAccessUtils.requiredSingleResult(DataAccessUtils.java:71)
+X		at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:663)
+X		at net.ex337.sahrp.dao.SaHrpDAOPostgresImpl.getItem(SaHrpDAOPostgresImpl.java:64)
+X		at net.ex337.sahrp.mtiv.SaHrbItemReader.run(SaHrbItemReader.java:37)
+X		at java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
+X		at java.util.concurrent.FutureTask$Sync.innerRun(Unknown Source)
+X		at java.util.concurrent.FutureTask.run(Unknown Source)
+X		at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(Unknown Source)
+X		at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+X		at java.lang.Thread.run(Unknown Source)
+X	*********** records:
+X	test	 * NOTE that to provide complete consistency, we should have
+X	test	 * two range tables, one for reading and one for writing:
+X	test	 * the writing one should be locked as below, and the reading one
+X	test	 * *updated* when the write table is *unlocked*.
+X	test	 *
+X	test	 * Otherwise, there's the possibility of reading from a database that
+X	test	 * may not have had the tail-end of the queue applied to it post-lock,
+X	test	 * hence could be out of date by a couple of milliseconds.
+X	apt-get install make
+X	apt-get install flex
+X	apt-get install bison
+X	apt-get install postgresql-server-dev-8.3
+X	download & tar -xvf <plproxy 2.0.8>
+X	make
+X	make install
+X	/usr/lib/postgresql/8.3/bin/createlang plpgsql sap
+X	/usr/lib/postgresql/8.3/bin/createlang plpgsql saplp
+X	psql saplp -U postgres -f modified.dblink.sql
+X	psql saplp -U postgres -f pghotrepart.sql
+X	change usercodes /passwords
+X	ensure that pg_dump and psql are on command line & piping works (i.e. unix)
+X	logging on postgresql user must have access to FS
+X	java 1.5 for running the load generators / testers
+X	notroot/thoughtpolice
+X	/*insert into plproxy.clusters (name,
+X			read_start, read_end,
+X			write_start, write_end,
+X			connstr, status) values
+X		('items',
+X		'00000000-0000-0000-0000-000000000000',
+X		'ffffffff-ffff-ffff-ffff-ffffffffffff',
+X		'00000000-0000-0000-0000-000000000000',
+X		'ffffffff-ffff-ffff-ffff-ffffffffffff',
+X		'dbname=sap host=localhost user=pg password=postgres',
+X		'A')*/
+X	--proxy
+X	--select * from plproxy.clusters
+X	--delete from plproxy.clusters
+X	--select dblink.get_connections()
+X	--select dblink.disconnect('source');
+X	--select dblink.disconnect('newconnstr');
+X	--select dblink.exec('source', 'create database sa10')
+X	select plproxy.split_range(1);
+X test	rename schemas to items_proxy and items
+X test	 - from and to should be start and end
+X not	version table - used or not?
+X no	remove hard-coded passwords
+X	#
+X	# load testing tool configuration file.
+X	#
+X	# all "unit" values must be one of days, hours,
+X	# minutes, seconds, microseconds, milliseconds, nanoseconds.
+X	# used for cross-partition queries (not yet active).
+X	num.owners = 50
+X	# the time period between starting writes.
+X	write.period = 1
+X	write.period.unit = milliseconds
+X	# the (rough) write size in bytes, must be at least 21
+X	block.size = 40
+X	#how long to run the load-tester for.
+X	run.time = 2
+X	run.time.unit = minutes
+X	#connection details for the proxy database
+X	proxy.host = localhost
+X	proxy.port = 0
+X	proxy.db = items_proxy
+X	proxy.user = postgres
+X	proxy.password = postgres
+X	proxy.pool.initSize = 20
+X	proxy.pool.maxSize = 100
+X	- measure
+X		MB/sec  ops
+X	         write   A       B
+X	         read    C       D
+X	         response time (interceptor?)
+X not in there		upgrade to 2.0.8, remove function str()
+X	TermsUsed
+X		range
+X		partition
+X		host
+X		proxy
+X		dblink
+X		document hard-coded passwords
+X	comment SQL
+X	  items0
+X	  items_proxy
+X	comment Java code
+X	 - utils & workers
+X	throroughly annoying:
+X	the cursor may be playing with my attempts to delete stuff AFTER the cursor is closed, and
+X	playing with stuff happening in subsequent connections from the same DB.
+X doesn't work	-> try using select limited to 1000 at a time, in a loop...
+X	-> try and replicate the problem outside to submit a bug report
+X doesn't work	-> try adding an explicit transaction around the cursor and delete as a workaround
+X	move to PL/Proxy instead of dblink	
+X	on delete cascade on queue should not happen, instead an exception should trigger another attempt
+X	  (find error constant)
+X	  AAAAAAAAAAARGH I was reading from the queue on the same DB!!!! STUPID STUPID STUPID!!!!
+X	test	table clusters should be partitions.
+X	test	find a better name than "queues" for schema with queues and backup/restored/unused-db logic
+X	test	 partition
+X	test	command-line tool
+X	test	 - properties file (with default name)
+X	test	 - should print out incremental results & stacktraces
+X	test	load tester moved to separate Jar
+X		documentation
+X		 - images
+X	test	TODO: in plproxy.public write methods, distinguish between 
+X	test	 - disabled partition (spinlock) and 
+X	test	 - no partition found (error). 
+X	test	  in plproxy public read methods, ensure that single-partition reads have
+X	test	  a partition, and that multi-partition reads are executed across the whole rangenge.
+X	test		(would this be too intensive?)
+X		 import uuid
+X		 uuid.uuid4().hex		 
+X	#!/usr/bin/python
+X	import uuid
+X	escapeToken = uuid.uuid4().hex
+X	fIn = open("items0.sql.unsafe")
+X	fOut = open("items0.safe.sql")
+X	try:
+X		for line in fIn
+X			fOut.write(line.replace("$escape$", "$"+escapeToken+"$"))
+X	finally:
+X		fIn.close()
+X		fOut.close()
+X test	installation
+X test		write simple installation shell-script
+X no		 - prompt for usercode and password
+X		 - randomize dollar-quoted tags in items0 queue.
+X	derive new connection string from old
+X	/**ADD CALLS_READ BOOLEAN AGAIN**/
+X	then 
+X	store loopback plproxy connstr somewhere
+X	store backup password
+X no	 - line numbers for password changes
+X	test	add name='items' to other public methods
+X	test	retest range checking with nothing in the partitions table
+X	code
+X		extract out username & password? (hardcoded in several locations)
+X		 - proxy connection string in split_partition
+X		 - new connection string in split_partition
+X		 - partition password in backup_restore_impl
+X	bug random generaton of UUIDs 
+X	bug -1 again on queue
+X	data
+X	install, test		delete new partition data on source DB
+X	install, test		ensure queue is empty on new partition
+X test	connect $1 would have to use plproxy_query_add_ident, and have a query	
+X test	static QueryBuffer *hash_sql;
+X test	/* points to one of the above ones */
+X test	static QueryBuffer *cur_sql;
+X test	add one of these, don't forget  reset_parser_vars	
+X test	add to plproxy_run_parser	
+X test	in cluster.c:
+X test		if (func->cluster_sql)
+X test			name = cluster_resolve_name(func, fcinfo);
+X test		else
+X test			name = func->cluster_name;
+X test	do something similar for connstr_sql
+X test	use connect $1; in single-partition items,
+X		problem in query.c line 304
+X		 -> connstr still working
+X		 -> arg number correct
+X		add to tests 
+X	plproxy: update docs
+

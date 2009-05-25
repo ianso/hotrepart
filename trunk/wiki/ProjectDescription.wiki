@@ -1,0 +1,49 @@
+#summary Hotrepart is a demonstrator project to illustrate a process for online repartitioning of a relational database.
+#labels postgresql, ec2 java, autoscaling, cloudcomputing, partitioning, sharding
+#sidebar TableOfContents
+
+<wiki:toc max_depth="2" />
+
+= Project description =
+
+Hotrepart is a demonstrator project to illustrate a process for online repartitioning of a relational database.
+
+The ultimate goal is to demonstrate auto-scaling of an RDBMS under production load on a utility computing platform, probably [http://aws.amazon.com/ec2/ Amazon EC2].
+
+The current codebase does not approach production requirements, but nicely illustrates the principle of the process.
+
+The project consists of a sample database schema and a load tester that puts the database under load, during which at any time the database can be repartitioned by calling a stored procedure via an SQL client. The database clients shouldn't notice anything except (hopefully) an improvement in performance once the process is complete.
+
+Future goals of this project include:
+ * Adapting the code to deploy new partitions on EC2 instances. Currently, the new partition runs on the same host as the existing database.
+ * Building a plugin for monitoring software such as [http://www.nagios.org/ Nagios] to automatically trigger repartitioning under extended periods of high load.
+ * Adapting the stress tester to run on multiple hosts and collate telemetry on a single console.
+
+The demonstration is implemented in [http://postgresql.org/ PostgreSQL], but the mechanism can be applied to any RDBMS with the right plugins or additions.
+
+The load tester is a small command-line tool built in Java 1.6 using Spring and built with Maven 2.
+
+= How it works =
+
+The demonstrated process cannot be applied to any SQL schema. Constraints common to most database partitioning schemas apply, along with some additional constraints; the [DatabaseDesignCriteria principles behind the design of a hot-repartionable database are documented here].
+
+Assuming a database schema follows the above principles, the [RepartitioningProcess process of repartioning a database while under load is documented here].
+
+The implementation of the above process in the real world is quite hackish, chiefly because we're doing things with tools that they weren't really built for. [ImplementationDetails A detailed description of the implementation can be found here].
+
+= Getting started =
+
+[/download The latest version of hotrepart is v1.0.0, which can be downloaded here !!!!!!! links]. The zip file contains the SQL files to setup the database schema, and the stress tester. Source for everything is in [/svn the subversion repository !!!!!!! links], and is covered by the Apache License 2.0.
+
+[DatabaseInstallation Installing the sample database schema is documented here]. The database implementation uses PostgreSQL with the PL/Python and dblink modules, and [http://developer.skype.com/SkypeGarage/DbProjects/PlProxy PL/Proxy].
+
+[LoadTesting Running the load tester is documented here]. Java 1.6 or above is required. For those interested in detailed documentation, [/site/javadoc/html Javadocs can be found here !!!!!!! relative links in Google wiki?].
+
+The sample schema has a simple API that consists of four stored procedures, so writing a stress tester in your favourite language or framework of choice shouldn't be complicated.
+
+= Contributing =
+
+First and foremost, any bug reports are gratefully accepted, although this is absolutely a spare-time project :-) Any general feedback or critique of the process would be interesting to hear too.
+
+If you're interested in helping out, feel free to get in touch with me via the address ian dot sollars at gmail dot com. A [TaskList task list] and todo list exists that I'm working my own way through, but there's room in the pool for everyone.
+
