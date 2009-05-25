@@ -11,12 +11,10 @@
 
 = Task list =
 
-* the new DB should be brought up on a new EC2 instance.
-* conditional on performance, should the current table-based queue replication of writes be replaced with something from e.g. slony?
-* Add PGBouncer installation to the docs, since a production environment would need this.
+ * the new DB should be brought up on a new EC2 instance.
+ * conditional on performance, should the current table-based queue replication of writes be replaced with something from e.g. slony?
+ * Add PGBouncer installation to the docs, since a production environment would need this.
 
 = Todos =
 
 Detailed todos are listed in hotrepart.todo in the subversion root.
-
-
