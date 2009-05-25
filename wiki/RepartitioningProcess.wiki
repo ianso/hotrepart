@@ -11,7 +11,7 @@ This page describes how the sample database is set up, and how it repartitions a
 
 The database is accessed via a proxy. The proxy forwards requests to the correct partition, or to all partitions if it's a query that retrieves a series of records.
 
-[pic]
+[http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep1.gif]
 
 The proxy decides which partition(s) to forward requests to based on an internal table, which splits the partition keyspace into ranges, and has one database per range. For reasons that will become clear below, each row has a "status" column, and ranges are specified separately for reads and writes.
 
@@ -31,7 +31,7 @@ The procedure is as follows:
 
 3) We then apply the contents of the FIFO queue to the new database.
 
-[pic]
+[http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep2.gif]
 
 4) A new range is added to the proxy lookup table, and the original range row is updated for writes only.
 
@@ -42,7 +42,7 @@ The procedure is as follows:
 
 The new range has status disabled. The status is used by write calls at the proxy level, which enter a spinlock when no active partition is available to write to. Because the read range start and end are both null, no reads will be executed against this partition.
 
-[pic]
+[http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep3.gif]
 
 5) Any writes remaining in the FIFO queue that have accumulated between the end of step 3 and the commit at the end of step 4 are applied to the new database.
 
@@ -53,7 +53,7 @@ The new range has status disabled. The status is used by write calls at the prox
 || 2 || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || dbname=items2 host=10.0.0.2 user=items || Active ||
 || 3 || 3fffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-fffffffffffe || 3fffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items3 host=10.0.0.3 user=items || Active ||
 
-[pic]
+[http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep4.gif]
 
 7) At this point the repartition is complete. The FIFO queue should be confirmed empty and disposed of.
 
