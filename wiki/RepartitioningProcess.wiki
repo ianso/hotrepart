@@ -15,7 +15,7 @@ The database is accessed via a proxy. The proxy forwards requests to the correct
 
 The proxy decides which partition(s) to forward requests to based on an internal table, which splits the partition keyspace into ranges, and has one database per range. For reasons that will become clear below, each row has a "status" column, and ranges are specified separately for reads and writes.
 
-|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status
+|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status ||
 || 1 || 00000000-0000-0000-0000-000000000000 || 7fffffff-ffff-ffff-ffff-fffffffffffe || 00000000-0000-0000-0000-000000000000 || 7fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items1 host=10.0.0.1 user=items || Active ||
 || 2 || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || dbname=items2 host=10.0.0.2 user=items || Active ||
 
@@ -35,7 +35,7 @@ The procedure is as follows:
 
 4) A new range is added to the proxy lookup table, and the original range row is updated for writes only.
 
-|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status
+|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status ||
 || 1 || 00000000-0000-0000-0000-000000000000 || 7fffffff-ffff-ffff-ffff-fffffffffffe || 00000000-0000-0000-0000-000000000000 || 3fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items1 host=10.0.0.1 user=items || Active ||
 || 2 || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || dbname=items2 host=10.0.0.2 user=items || Active ||
 || 3 || null || null || 3fffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items3 host=10.0.0.3 user=items || *Disabled* ||
@@ -48,7 +48,7 @@ The new range has status disabled. The status is used by write calls at the prox
 
 6) The proxy lookup table is updated again to its final state:
 
-|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status
+|| Range ID || Read range start || Read range end || Write range start || Write range end || Database || Status ||
 || 1 || 00000000-0000-0000-0000-000000000000 || 3fffffff-ffff-ffff-ffff-fffffffffffe || 00000000-0000-0000-0000-000000000000 || 3fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items1 host=10.0.0.1 user=items || Active ||
 || 2 || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-ffffffffffff || ffffffff-ffff-ffff-ffff-ffffffffffff || dbname=items2 host=10.0.0.2 user=items || Active ||
 || 3 || 3fffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-fffffffffffe || 3fffffff-ffff-ffff-ffff-ffffffffffff || 7fffffff-ffff-ffff-ffff-fffffffffffe || dbname=items3 host=10.0.0.3 user=items || Active ||
