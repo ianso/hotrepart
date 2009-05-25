@@ -68,7 +68,6 @@ Given that a schema meets all these criteria, then it should be possible to do o
 
 ====== Footnotes ======
 
-[0] Pseudo-random in this document effectively means random. Truly random data would have to be extracted from background radiation or something, whereas a good hashing algorithm such as SHA-256 is fine for our purposes.
+[[0]] Pseudo-random in this document effectively means random. Truly random data would have to be extracted from background radiation or something, whereas a good hashing algorithm such as SHA-256 is fine for our purposes.
 
-[1] In the implementation, the primary key is a pseudo-random 128-bit number, which for our purposes has practically, but not theoretically, the same properties as a UUID. A group of UUIDs generated on the same host may all have identical most significant bits depending on the UUID type. A real UUID may have to be reversed before the partition is chosen to swap the LSBs and the MSBs and maintain the same properties.
-
+[[1]] In the implementation, the primary key is a pseudo-random 128-bit number, which for our purposes has practically, but not theoretically, the same properties as a UUID. A group of UUIDs generated on the same host may all have identical most significant bits depending on the UUID type. A real UUID may have to be reversed before the partition is chosen to swap the LSBs and the MSBs and maintain the same properties.
