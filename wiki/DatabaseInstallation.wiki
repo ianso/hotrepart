@@ -7,9 +7,9 @@
 
 The following packages need to be installed:
 
-# PL/Proxy, v2.0.7 or higher
-# plpythonu (and therefore a recent 2.5-series Python package)
-# dblink, installed via the customized script included in the package
+ # PL/Proxy, v2.0.7 or higher
+ # plpythonu (and therefore a recent 2.5-series Python package)
+ # dblink, installed via the customized script included in the package
 
 As of writing, PL/Proxy needs a small patch applied to it, and so generally needs to be installed from source, which also then requires make, flex, bison, and the development extensions to PostgreSQL. Under Debian-based systems such as Ubuntu, assuming PostgreSQL and Python is already installed, then this would be an example installation.
 
