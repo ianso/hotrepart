@@ -66,9 +66,6 @@ values (
 
 	/* password of user under which items0 postgres process runs*/
 	'postgres',
-
-	/* cluster version, incremented on repartitioning */
-	1
 );
 
 /* initial partition*/
@@ -100,5 +97,3 @@ select * from plproxy.partitions
 --splits a specified range
 select plproxy.split_partition(1);
 }}}
-
-
