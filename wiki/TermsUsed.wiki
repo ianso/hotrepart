@@ -1,5 +1,5 @@
-#summary Hotrepart is a demonstrator project to illustrate a process for online repartitioning of a relational database.
-#labels postgresql, ec2 java, autoscaling, cloudcomputing, partitioning, sharding
+#summary Basic terminology.
+#labels postgresql,ec2java,autoscaling,cloudcomputing,partitioning,sharding
 #sidebar TableOfContents
 
 <wiki:toc max_depth="2" />
@@ -29,4 +29,3 @@ A proxy is anything that accepts data in a particular protocol and forwards it o
 = dblink =
 
 Dblink is an additional supplied module for PostgreSQL that allows different databases to execute procedures and queries on other databases.
-
