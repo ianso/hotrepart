@@ -1,4 +1,4 @@
-c#summary Implementation details of hotrepart on PostgreSQL
+#summary Implementation details of hotrepart on PostgreSQL
 #sidebar TableOfContents
 
 <wiki:toc max_depth="2" />
@@ -57,4 +57,3 @@ When the 'write queue' is initally read from, before the partition table is upda
 ----------------------------
 
 The source code is of course the best and most accurate description of the implementation. [DatabaseInstallation Installing and running the sample database schema is documented here.]
-
