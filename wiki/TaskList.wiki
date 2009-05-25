@@ -17,4 +17,4 @@
 
 = Todos =
 
-Detailed todos are listed in hotrepart.todo in the subversion root.
+Detailed todos are listed in hotrepart.todo in the subversion trunk.
