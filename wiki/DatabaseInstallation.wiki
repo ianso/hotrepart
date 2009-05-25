@@ -65,7 +65,7 @@ values (
 	'dbname=items_proxy host=localhost user=postgres password=postgres',
 
 	/* password of user under which items0 postgres process runs*/
-	'postgres',
+	'postgres'
 );
 
 /* initial partition*/
