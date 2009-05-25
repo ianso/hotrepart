@@ -1,0 +1,57 @@
+#summary Load testing the sample databasse
+#sidebar TableOfContents
+
+<wiki:toc max_depth="2" />
+
+= Load testing the sample database =
+
+The load generating tool for the sample database schema is a small command-line program written in Java 1.6. It uses a configuration file found in the same directory as the extracted tool. The configuration file comments explain the settings.
+
+The goal of the load tester is to generate a continuous high level of load for the sample database, and at the same time continually verify its correct functioning with consistency checks.
+
+= Using the tool =
+
+The tool is used from the command line. There are two main functions, firstly to validate a correct installation, and secondly to run load tests.
+
+Verifying an installation runs some standard reads and writes, and checks the results. Running the load test runs a continuous series of tests as explained below, for the duration defined in the configuration file.
+
+The load tester is launched using a handy shell script that takes as the first argument one of three options:
+
+ * "verify" verifies the correctness of the installation.
+ * "loadtest" runs a load test. Note that when running the load test, your computer/VM/instance will probably run more slowly since the load-tester consumes a lot of CPU.
+ * "mock" runs a load test against a mock implementation of the DAO interface that uses in-memory storage.
+
+An optional second argument specifies a configuration file name. By default, the configuration file in the same directory named "loadtest.properties" is used.
+
+As an example, below we are launching a load test with an alternate config file location: 
+
+{{{
+$./loadtest.sh loadtest alt.properties
+}}}
+
+= How to test the repartitioning =
+
+Assuming that the database and the load testing tool are set up on the same host for a naive test, and that the user and password postgres/postgres is used to access the test database, then testing the repartitioning on a clean install would run as follows:
+
+ # Open an SQL client at items_proxy.
+ # From a command line, execute {{{$./loadtest.sh loadtest}}}.
+ # Wait for one minute, and then, from the SQL client, execute {{{select plproxy.split_partition(1);}}}
+
+If all is well, the SQL command should return with no error messages, and no error messages should appear in the console running the load tester.
+
+ # Postgres should now have two databases named items0 and items1.
+ # Running {{{select * from plproxy.partitions}}} should show two lines, one for each database.
+
+= How it works =
+
+The tool makes heavy use of the java.util.concurrent library, and is therefore designed around a series of queues and services that read and write from those queues.
+
+The load tester continuously executes writes on the database at the interval specified in the config file. Note that this does not prevent concurrency: a small interval guarantees a large number of concurrent writes at any one time.
+
+A succesful write schedules a read-back of the same data to confirm that it was correctly written. The thread pool behind the reader service is larger than the thread pool of the write service, so the read-back should be roughly immediate.
+
+The primary ID and version of newly created rows are also offered to a bounded queue that is read by a third service that updates the row, and then likewise schedules a read-back to verify the changes have been made.
+
+
+
+

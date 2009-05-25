@@ -1,0 +1,361 @@
+
+/*
+
+This file sets up the database schema for the storage of data.
+It also contains the queuing code, which is done at this level
+instead of at the proxy level which is done for reasons discussed
+in ImplementationDetails on the wiki.
+
+*/
+
+
+/*
+ * 
+ * Cluster queueing code
+ * 
+ */
+
+
+create language plpgsql;
+create language plpythonu;
+
+CREATE SCHEMA partition;
+
+/*
+stores the ranges for which writes need to be queued
+*/
+CREATE TABLE partition.queue_ranges
+(
+  range_start uuid NOT NULL,
+  range_end uuid NOT NULL,
+  id serial NOT NULL,
+  CONSTRAINT partition_pkey PRIMARY KEY (id)
+)
+WITH (OIDS=FALSE);
+
+/*
+the data for the queues.
+*/
+CREATE TABLE partition.queue
+(
+  id bigserial NOT NULL,
+  id_queue integer,
+  call text NOT NULL,
+  CONSTRAINT pkey PRIMARY KEY (id),
+  CONSTRAINT q_fk FOREIGN KEY (id_queue)
+      REFERENCES partition.queue_ranges (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+WITH (OIDS=FALSE);
+
+
+CREATE INDEX fki_q_fk
+  ON partition.queue
+  USING btree
+  (id_queue);
+
+CREATE INDEX pkey_btree
+  ON partition.queue
+  USING btree
+  (id);
+
+CREATE INDEX q_btree
+  ON partition.queue
+  USING btree
+  (id_queue);
+
+/*
+ * Reads from the queue of the source node, and deletes executed stuff.
+ */
+create or replace function partition.read_from_queue(connstr text, id_queue integer) returns bigint as
+$BODY$
+declare
+	call record;
+	max_id bigint;
+	callsread boolean;
+	--exception handling
+	connections text[];
+	num_con integer;
+	debugstr text;
+begin
+
+	perform dblink.connect('queuesrc', connstr);
+	
+	perform dblink.open('queuesrc', 'queuecursor', 'select id, call from partition.queue where id_queue='||id_queue||' order by id asc');
+
+	loop
+		callsread := false;
+		for call in 
+			select * from dblink.fetch('queuesrc', 'queuecursor', 1000) as (id bigint, callstr text)
+		loop
+			begin
+				execute call.callstr;
+			exception
+				when unique_violation then
+					raise notice 'Unique violation';
+					--do nothing;
+					--continue;
+				when others then
+					raise exception 'Error in loop msg: %', SQLERRM;
+			end;
+			max_id := call.id;
+			callsread := true;
+		end loop;
+		exit when callsread = false;
+	end loop;
+
+	perform dblink.close('queuesrc', 'queuecursor');
+
+	if max_id is not null then
+		raise notice 'deleting calls below %', max_id;
+		debugstr := dblink.exec('queuesrc', 'delete from partition.queue where id_queue='||id_queue||' and id <= '||max_id);
+		raise notice 'debugstr from delete %', debugstr;
+	end if;
+
+	perform dblink.disconnect('queuesrc');
+	return 0;
+
+exception when OTHERS then
+	connections := dblink.get_connections();
+	for num_con in coalesce(array_lower(connections,1),0) .. coalesce(array_upper(connections,1),-1) loop
+		perform dblink.disconnect(connections[num_con]);
+	end loop;
+	raise exception 'Error, msg:%', SQLERRM;
+end;
+$BODY$
+language plpgsql;
+
+
+/*
+uses Postgres internal tables to find a database schema name unique
+on this host only. Not thread-safe, two calls could return the same
+name, but normally the same partition would not be repartitioned
+to multiple hosts at the same time.
+*/	
+create or replace function partition.get_unused_database(dbprefix text) returns text as $$
+declare
+	dbnum			integer;
+	found_db		smallint;
+begin
+
+	dbnum := 0;
+	loop
+		select count(*) into found_db from pg_database where datname=dbprefix||dbnum;
+		exit when found_db = 0;
+		dbnum := dbnum +1;
+	end loop;
+
+	return dbprefix||dbnum;
+end;
+$$ language plpgsql;
+
+/*
+ * backup and restore to new database.
+
+Simply done on the same host right now, would be brought up
+on a new host in the full implementation using EC2.
+
+ */
+create or replace function partition.backup_restore_impl(current_db text, current_usr text, password text, newdb text) returns text as
+$$
+	import commands;
+	return commands.getoutput(
+		'export PGPASSWORD='+password+'; pg_dump -U '+current_usr+
+		' -h localhost '+current_db+' | psql -h localhost '+newdb+' '+current_usr+' 1> /dev/null');
+$$ language plpythonu;
+
+/*
+wrapper for above function, add current user.
+*/
+create or replace function partition.backup_restore_to(newdb text, password text) returns integer as
+$$
+declare
+	output text;
+begin
+	output := partition.backup_restore_impl(current_database()::text, current_user::text, password, newdb);
+	if output <> '' then
+		raise exception 'Database backup & restore failed: %', output;
+	end if;
+	return 0;
+end;
+$$ language plpgsql;
+
+/*
+removes a queue
+*/
+create or replace function partition.remove_queue(id_queue integer) returns integer as $$
+begin
+	delete from partition.queue_ranges where id = id_queue;
+	return 1;
+exception
+	when integrity_constraint_violation then
+	return -1;
+end;
+$$ language plpgsql;
+
+/*
+ * - adds a new queue for a range
+ */
+create or replace function partition.add_range_queue(i_range_start uuid, i_range_end uuid) returns integer as $$
+begin
+
+	insert into partition.queue_ranges(range_start, range_end) values(i_range_start, i_range_end);
+
+	return currval('partition.queue_ranges_id_seq');
+
+end;
+$$ language plpgsql;
+
+
+
+
+/*
+ * private DAO logic & tables
+  * 
+ */
+
+-- DROP TABLE items;
+CREATE SCHEMA private;
+
+CREATE TABLE private.items
+(
+  iditem uuid NOT NULL,
+  description text,
+  "owner" bigint,
+  v integer,
+  CONSTRAINT pkey PRIMARY KEY (iditem)
+)
+WITH (OIDS=FALSE);
+
+/*
+
+All the read queries have as additional criteria clauses 
+limiting them to the range assigned to this partition in the
+proxy.
+
+The reason for this is that old data that was moved to a new
+partition is not currently removed from the previous partition,
+which could result in duplicate results if these criteria
+were not applied.
+
+*/
+
+
+create or replace function private.get_items(owners bigint[], range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
+begin
+	for iditem, description, owner, v in 
+		select 
+			items.iditem, items.description, items.owner, items.v 
+		from private.items 
+		where 
+			items.owner = any(owners) 
+		and items.iditem >= range_start
+		and items.iditem <= range_end
+	loop
+		return next;
+	end loop;
+return;
+end;
+$$ language plpgsql;
+
+create or replace function private.get_item(i_iditem uuid, range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
+begin
+	for iditem, description, owner, v in 
+		select 
+			items.iditem, items.description, items.owner, items.v 
+		from private.items 
+		where 
+			items.iditem = i_iditem
+		and items.iditem >= range_start
+		and items.iditem <= range_end
+	loop
+		return next;
+	end loop;
+return;
+end;
+$$ language plpgsql;
+
+
+
+
+/*
+
+As a safeguard, all the writes will throw an exception if the write
+is outside the range assigned to this partition.
+
+*/
+
+CREATE OR REPLACE FUNCTION private.insert_item(i_iditem uuid, i_description text, i_owner bigint, range_start uuid, range_end uuid, connstr text)
+  RETURNS integer AS
+$BODY$
+declare
+	num_ins integer;
+	queue_range record;
+begin
+	if not i_iditem >= range_start or not i_iditem <= range_end then
+		raise exception 'Item of UUID % not in partition range % to %', i_iditem, range_start, range_end;
+	end if;
+	
+	/* the actual write */
+
+	insert into private.items (iditem, description, owner, v) values ($1, $2, $3, 0);
+	get diagnostics num_ins = row_count;
+
+	/*
+	
+	if the write was successful then the write is copied to any queues with a range
+	covering the key of the write.
+	
+	The write is written to every queue as an insert statement, with Postgres-style 
+	dollar-quoted string constants. 
+	
+	IMPORTANT: The 'tag' in the dollar-quotes is a random hash, which is important
+	not to publish for your installation, since it could open the installation to
+	SQL injection attacks.
+	
+	*/
+	if num_ins = 1 then
+		for queue_range in 
+			select * from partition.queue_ranges where queue_ranges.range_start <= i_iditem and queue_ranges.range_end >= i_iditem
+		loop
+			insert into partition.queue(id_queue, call) values (queue_range.id, 'insert into private.items (iditem, description, owner, v) values ('''||i_iditem||''', $escape$'||i_description||'$escape$, '||i_owner||', 0)');
+		end loop;
+	end if;
+
+	return num_ins;
+end;
+$BODY$ LANGUAGE 'plpgsql' ;
+
+/*
+
+as above, update copies the SQL into any queues with ranges including this key.
+
+*/
+
+CREATE OR REPLACE FUNCTION private.update_item(i_iditem uuid, i_description text, i_v integer, range_start uuid, range_end uuid, connstr text)
+  RETURNS integer AS
+$BODY$
+declare
+	num_upd integer;
+	queue_range record;
+begin
+
+	update private.items set description = i_description, v = v+1 where iditem = i_iditem and v = i_v and iditem >= range_start and iditem <= range_end;
+	get diagnostics num_upd = row_count;
+
+	if num_upd = 1 then
+		for queue_range in 
+			select * from partition.queue_ranges where queue_ranges.range_start <= i_iditem and queue_ranges.range_end >= i_iditem
+		loop
+			insert into partition.queue(id_queue, call) values (queue_range.id, 'update private.items set description = $escape$'||i_description||'$escape$, v = v+1 where iditem = '''||i_iditem||''' and v = '||i_v);
+		end loop;
+	end if;
+
+	return num_upd;
+end;
+$BODY$
+  LANGUAGE 'plpgsql' ;
+
+
+
+

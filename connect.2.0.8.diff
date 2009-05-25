@@ -1,0 +1,206 @@
+Index: sql/plproxy_test.sql
+===================================================================
+--- sql/plproxy_test.sql	(revision 187)
++++ sql/plproxy_test.sql	(revision 194)
+@@ -143,7 +143,17 @@
+ as $$ connect 'dbname=test_part'; select current_database(); $$ language plproxy;
+ select * from test_connect1();
+ 
++-- test CONNECT $argument
++create function test_connect2(connstr text) returns text
++as $$ connect connstr; select current_database(); $$ language plproxy;
++select * from test_connect2('dbname=test_part');
+ 
++-- test CONNECT function($argument)
++create function str(str text) RETURNS text AS $$ select $1; $$ LANGUAGE sql;
++create function test_connect3(connstr text) returns text
++as $$ connect str(connstr); select current_database(); $$ language plproxy;
++select * from test_connect3('dbname=test_part');
++
+ -- test quoting function
+ create type "RetWeird" as (
+     "ColId" int4,
+Index: expected/plproxy_test.out
+===================================================================
+--- expected/plproxy_test.out	(revision 187)
++++ expected/plproxy_test.out	(revision 194)
+@@ -243,6 +243,25 @@
+  test_part
+ (1 row)
+ 
++-- test CONNECT $argument
++create function test_connect2(connstr text) returns text
++as $$ connect connstr; select current_database(); $$ language plproxy;
++select * from test_connect2('dbname=test_part');
++ test_connect2 
++---------------
++ test_part
++(1 row)
++
++-- test CONNECT function($argument)
++create function str(str text) RETURNS text AS $$ select $1; $$ LANGUAGE sql;
++create function test_connect3(connstr text) returns text
++as $$ connect str(connstr); select current_database(); $$ language plproxy;
++select * from test_connect3('dbname=test_part');
++ test_connect3 
++---------------
++ test_part
++(1 row)
++
+ -- test quoting function
+ create type "RetWeird" as (
+     "ColId" int4,
+Index: src/cluster.c
+===================================================================
+--- src/cluster.c	(revision 187)
++++ src/cluster.c	(revision 194)
+@@ -400,17 +400,17 @@
+  * Call resolve function
+  */
+ static const char *
+-cluster_resolve_name(ProxyFunction *func, FunctionCallInfo fcinfo)
++resolve_query(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *query)
+ {
+ 	const char *name;
+ 	HeapTuple	row;
+ 	TupleDesc	desc;
+ 
+-	plproxy_query_exec(func, fcinfo, func->cluster_sql);
++	plproxy_query_exec(func, fcinfo, query);
+ 
+ 	if (SPI_processed != 1)
+ 		plproxy_error(func, "'%s' returned %d rows, expected 1",
+-					  func->cluster_sql->sql, SPI_processed);
++					  query->sql, SPI_processed);
+ 
+ 	desc = SPI_tuptable->tupdesc;
+ 	if (SPI_gettypeid(desc, 1) != TEXTOID)
+@@ -419,7 +419,7 @@
+ 	row = SPI_tuptable->vals[0];
+ 	name = SPI_getvalue(row, desc, 1);
+ 	if (name == NULL)
+-		plproxy_error(func, "Cluster name map func returned NULL");
++		plproxy_error(func, "Cluster/connect name map func returned NULL");
+ 
+ 	return name;
+ }
+@@ -438,15 +438,24 @@
+ 	const char *name;
+ 	Datum		dname;
+ 
+-	/* functions used CONNECT */
+-	if (func->connect_str)
++
++	/* functions used CONNECT with query */
++	if (func->connect_sql) {
++		func->connect_str = resolve_query(func, fcinfo, func->connect_sql);
+ 		return fake_cluster(func);
++	}
+ 
++
++	/* functions used straight CONNECT */
++	if (func->connect_str) {
++		return fake_cluster(func);
++	}
++
+ 	/* initialize plans on demand only */
+ 	plproxy_cluster_plan_init();
+ 
+ 	if (func->cluster_sql)
+-		name = cluster_resolve_name(func, fcinfo);
++		name = resolve_query(func, fcinfo, func->cluster_sql);
+ 	else
+ 		name = func->cluster_name;
+ 
+Index: src/parser.y
+===================================================================
+--- src/parser.y	(revision 187)
++++ src/parser.y	(revision 194)
+@@ -40,6 +40,7 @@
+ static QueryBuffer *cluster_sql;
+ static QueryBuffer *select_sql;
+ static QueryBuffer *hash_sql;
++static QueryBuffer *connect_sql;
+ 
+ /* points to one of the above ones */
+ static QueryBuffer *cur_sql;
+@@ -48,7 +49,7 @@
+ static void reset_parser_vars(void)
+ {
+ 	got_run = got_cluster = got_connect = 0;
+-	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
++	cur_sql = select_sql = cluster_sql = hash_sql = connect_sql = NULL;
+ 	xfunc = NULL;
+ }
+ 
+@@ -78,9 +79,26 @@
+ 					got_connect = 1; }
+ 			;
+ 
+-connect_spec: STRING	{ xfunc->connect_str = plproxy_func_strdup(xfunc, $1); }
++connect_spec: connect_func sql_token_list | connect_name | connect_direct 
+ 			;
+ 
++connect_direct:	IDENT	{	connect_sql = plproxy_query_start(xfunc, false);
++						cur_sql = connect_sql;
++						plproxy_query_add_const(cur_sql, "select ");
++						if (!plproxy_query_add_ident(cur_sql, $1))
++							yyerror("invalid argument reference: %s", $1);	
++					}
++			;
++
++connect_name: STRING	{ xfunc->connect_str = plproxy_func_strdup(xfunc, $1); }
++			;
++
++connect_func: FNCALL	{ connect_sql = plproxy_query_start(xfunc, false);
++	 				  cur_sql = connect_sql;
++	 				  plproxy_query_add_const(cur_sql, "select * from ");
++	 				  plproxy_query_add_const(cur_sql, $1); }
++		 ;
++
+ cluster_stmt: CLUSTER cluster_spec ';' {
+ 							if (got_cluster)
+ 								yyerror("Only one CLUSTER statement allowed");
+@@ -207,6 +225,9 @@
+ 	if (cluster_sql)
+ 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
+ 
++	if (connect_sql)
++		xfunc->connect_sql = plproxy_query_finish(connect_sql);
++
+ 	reset_parser_vars();
+ }
+ 
+Index: src/plproxy.h
+===================================================================
+--- src/plproxy.h	(revision 187)
++++ src/plproxy.h	(revision 194)
+@@ -239,6 +239,7 @@
+ 	ProxyQuery *hash_sql;		/* Hash execution for R_HASH */
+ 	int			exact_nr;		/* Hash value for R_EXACT */
+ 	const char *connect_str;	/* libpq string for CONNECT function */
++	ProxyQuery *connect_sql;	/* Optional query for CONNECT function */
+ 
+ 	/*
+ 	 * calculated data
+Index: src/function.c
+===================================================================
+--- src/function.c	(revision 187)
++++ src/function.c	(revision 194)
+@@ -193,6 +193,7 @@
+ 	/* free cached plans */
+ 	plproxy_query_freeplan(func->hash_sql);
+ 	plproxy_query_freeplan(func->cluster_sql);
++	plproxy_query_freeplan(func->connect_sql);
+ 
+ 	/* release function storage */
+ 	MemoryContextDelete(func->ctx);
+@@ -415,6 +416,8 @@
+ 		plproxy_query_prepare(f, fcinfo, f->cluster_sql);
+ 	if (f->hash_sql)
+ 		plproxy_query_prepare(f, fcinfo, f->hash_sql);
++	if (f->connect_sql)
++		plproxy_query_prepare(f, fcinfo, f->connect_sql);
+ 
+ 	/* sanity check */
+ 	if (f->run_type == R_ALL && !fcinfo->flinfo->fn_retset)
