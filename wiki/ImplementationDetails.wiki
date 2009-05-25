@@ -19,17 +19,18 @@ The FIFO queue is a simple table, which is emptied after being read. This was do
 
 The sample DB installation initially consists of two databases, one for the proxy and one for the actual database itself. Inside each database, the code is organised using schemas as a form of namespace to divide code by function.
 
+{{{
 items_proxy
- +- public       <- The public facing interface of the database schema.
- +- private      <- The internal proxy logic.
- +- plproxy      <- System tables for PL/Proxy and repartitioning logic.
- +- dblink       <- Stores dblink functions.
+  +- public       <- The public facing interface of the database schema.
+  +- private      <- The internal proxy logic.
+  +- plproxy      <- System tables for PL/Proxy and repartitioning logic.
+  +- dblink       <- Stores dblink functions.
 
 items
- +- private      <- Actual data storage (accessed through API identical to items_proxy.private)
- +- partitions   <- Queue logic and tables, backup/restore code.
- +- dblink       <- Stores dblink functions.
-
+  +- private      <- Actual data storage (accessed through API identical to items_proxy.private)
+  +- partitions   <- Queue logic and tables, backup/restore code.
+  +- dblink       <- Stores dblink functions.
+}}}
 The reason that the queueing logic is implemented at the data storage level is because the write is stored in the queue in the form of an 'insert' or 'update' statement. Although moving the queueing logic to items_proxy would consolidate all repartitioning logic in one database, it also makes sense to keep all code directly referencing the storage structure in the same database.
 
 The bakup/restore code is currently a three-line PL/python procedure that dumps the current database and restores it to a new one.
@@ -56,6 +57,4 @@ When the 'write queue' is initally read from, before the partition table is upda
 ----------------------------
 
 The source code is of course the best and most accurate description of the implementation. [DatabaseInstallation Installing and running the sample database schema is documented here.]
-
-
 
