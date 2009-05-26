@@ -67,7 +67,7 @@ values (
 	/* password of user under which items0 postgres process runs*/
 	'postgres',
 
-	/*cluster versoin*/
+	/*cluster version*/
 	1
 
 );
