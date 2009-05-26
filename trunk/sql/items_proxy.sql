@@ -38,7 +38,7 @@ plproxy & partition configuration
 create table plproxy.config (
 	proxy_connstr     text,
 	partition_pass    text,
-	cluster_version   int4;
+	cluster_version   int4
 );
 
 /*
@@ -119,38 +119,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-declare
-	partition record;
-	total_range uuid;
-	num_ranges integer;
-begin
-
-	num_ranges := 0;
-	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
-
-	for partition in
-		select * from plproxy.partitions where name='items' and read_start is not null
-	loop
-		return query select * from private.get_items(owners, partition.read_start, partition.read_end, partition.connstr);
-
-		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
-
-		num_ranges := num_ranges + 1;
-
-	end loop;
-
-	if(num_ranges = 0) then
-		raise exception 'no ranges found for items in the DB!';
-	end if;
-
-	if plproxy.uuid_add(total_range, num_ranges-1)::uuid != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
-		raise exception 'Total UUID range % is not equal to enture range 32*f', total_range;
-	end if;
-
-end;
-$$ language plpgsql;
-
-
 /*
 
 Called on every call to PL/Proxy to ensure that the cluster configuration
@@ -162,13 +130,6 @@ RETURNS int4 AS $$
 select cluster_version from plproxy.config;
 $$ LANGUAGE sql;
 
-
-/*
-used only because the PL/Proxy CLUSTER function doesn't take procedure
-arguments, but it does take procedure calls which can use arguments...
-*/
-CREATE OR REPLACE FUNCTION plproxy.str(str text)
-RETURNS text AS $$ select $1; $$ LANGUAGE sql;
 
 
 /*
