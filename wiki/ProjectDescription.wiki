@@ -1,5 +1,5 @@
 #summary Hotrepart is a demonstrator project to illustrate a process for online repartitioning of a relational database.
-#labels postgresql, ec2 java, autoscaling, cloudcomputing, partitioning, sharding
+#labels postgresql,ec2java,autoscaling,cloudcomputing,partitioning,sharding
 #sidebar TableOfContents
 
 <wiki:toc max_depth="2" />
@@ -33,7 +33,7 @@ The implementation of the above process in the real world is quite hackish, chie
 
 = Getting started =
 
-[/download The latest version of hotrepart is v1.0.0, which can be downloaded here !!!!!!! links]. The zip file contains the SQL files to setup the database schema, and the stress tester. Source for everything is in [/svn the subversion repository !!!!!!! links], and is covered by the Apache License 2.0.
+[/download The latest version of hotrepart is v1.0.0, which can be downloaded here !!!!!!! links]. The zip file contains the SQL files to setup the database schema, and the stress tester. Source for everything is in [http://code.google.com/p/hotrepart/source/checkout the subversion repository], and is covered by the Apache License 2.0.
 
 [DatabaseInstallation Installing the sample database schema is documented here]. The database implementation uses PostgreSQL with the PL/Python and dblink modules, and [http://developer.skype.com/SkypeGarage/DbProjects/PlProxy PL/Proxy].
 
@@ -46,4 +46,3 @@ The sample schema has a simple API that consists of four stored procedures, so w
 First and foremost, any bug reports are gratefully accepted, although this is absolutely a spare-time project :-) Any general feedback or critique of the process would be interesting to hear too.
 
 If you're interested in helping out, feel free to get in touch with me via the address ian dot sollars at gmail dot com. A [TaskList task list] and todo list exists that I'm working my own way through, but there's room in the pool for everyone.
-
