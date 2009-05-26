@@ -1,16 +1,7 @@
-========release when married
-
-========actual release
-
-	initial release
-	 - fully-qualified internal non-wiki links?
-
-========after release
 		
 	adapt broad items to use run on all
 	get_cluster_partitions should return proper list,
 	 - get_cluster_version should have table behind it, inced by split_partition
-
 
 	use SELECT at PL/Proxy level to pass the function
 	to the partition without the connection string.
@@ -357,4 +348,8 @@ X		 -> connstr still working
 X		 -> arg number correct
 X		add to tests 
 X	plproxy: update docs
-
+X	initial release
+X	 - fully-qualified internal non-wiki links?
+X   ========release when married
+X   ========actual release
+X   ========after release
