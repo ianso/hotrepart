@@ -2,7 +2,6 @@
 	adapt broad items to use run on all
 	get_cluster_partitions should return proper list,
 	 - get_cluster_version should have table behind it, inced by split_partition
-
 	use SELECT at PL/Proxy level to pass the function
 	to the partition without the connection string.
 	(try, records seem difficult)

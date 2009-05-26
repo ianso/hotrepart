@@ -392,7 +392,7 @@ create or replace function private.update_item(i_iditem uuid, i_description text
 connect oonnstr;
 $$ language plproxy;
 
-create or replace function private.get_items(owners bigint[], range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
+create or replace function private.get_items(owners bigint[] out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
 cluster 'items';
 run on all;
 $$ language plproxy;
@@ -439,9 +439,7 @@ in the primary key.
 CREATE OR REPLACE FUNCTION public.get_items(IN owners bigint[], OUT iditem uuid, OUT description text, OUT "owner" bigint, OUT v integer)
   RETURNS SETOF record AS
 $$
-begin
     select * from private.get_items(owners);
-end;
 $$ language sql;
 
 /*
