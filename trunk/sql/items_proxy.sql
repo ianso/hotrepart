@@ -18,7 +18,7 @@ CREATE LANGUAGE plproxy HANDLER plproxy_call_handler;
 CREATE SCHEMA plproxy;
 
 --PL/Proxy internal function
-CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_config (
   in cluster_name text,
   out key text,
   out val text)
@@ -69,38 +69,87 @@ We pad the result to return a number of results to the power of two.
 */
 CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
 RETURNS SETOF text AS $$
-daclare
-	num_connstrs    int4;
+declare
+	total_range uuid;
+	num_ranges integer;
 	closest_power   int4;
 	last_connstr    text;
 	partition       record;
 BEGIN
-	num_connstrs := 0;
-	for each partition in select connstr from plproxy.partitions where name = cluster_name
+
+	num_ranges := 0;
+	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
+
+	for partition in 
+        select connstr from plproxy.partitions where name = cluster_name and read_start is not null
 	loop
 		return next partition.connstr;
-		num_connstrs := num_connstrs + 1;
+
+		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
+		num_ranges := num_ranges + 1;
+
 		last_connstr := partition.connstr;
 	end loop;
 
+	if(num_ranges = 0) then
+		raise exception 'no ranges found for items in the DB for cluster %!', cluster_name;
+	end if;
+
+	if plproxy.uuid_add(total_range, num_ranges-1)::uuid != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
+		raise exception 'Total UUID range % is not equal to enture range 32*f for cluster %', total_range, cluster_name;
+	end if;
+
 	closest_power := 1;
 
-	if closest_power = num_connstrs then
+	if closest_power = num_ranges then
 		return;
 	end if;
 
 	loop
 		closest_power := closest_power * 2;
-		exit when closest_power >= num_connstrs;
+		exit when closest_power >= num_ranges;
 	end loop;
 
-	while closest_power < num_connstrs loop
+	while num_ranges < closest_power loop
 		return next last_connstr;
-		num_connstrs := num_connstrs + 1;
+		num_ranges := num_ranges + 1;
 	end loop;
 		
 END;
 $$ LANGUAGE plpgsql;
+
+
+declare
+	partition record;
+	total_range uuid;
+	num_ranges integer;
+begin
+
+	num_ranges := 0;
+	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
+
+	for partition in
+		select * from plproxy.partitions where name='items' and read_start is not null
+	loop
+		return query select * from private.get_items(owners, partition.read_start, partition.read_end, partition.connstr);
+
+		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
+
+		num_ranges := num_ranges + 1;
+
+	end loop;
+
+	if(num_ranges = 0) then
+		raise exception 'no ranges found for items in the DB!';
+	end if;
+
+	if plproxy.uuid_add(total_range, num_ranges-1)::uuid != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
+		raise exception 'Total UUID range % is not equal to enture range 32*f', total_range;
+	end if;
+
+end;
+$$ language plpgsql;
+
 
 /*
 
@@ -120,8 +169,6 @@ arguments, but it does take procedure calls which can use arguments...
 */
 CREATE OR REPLACE FUNCTION plproxy.str(str text)
 RETURNS text AS $$ select $1; $$ LANGUAGE sql;
-
-
 
 
 /*
@@ -214,6 +261,8 @@ begin
 	 * 2) update the parent partition reads to equal the writes.
 	 */
 	update plproxy.partitions set read_end = write_end where id = id_parentpartition;
+
+    update plproxy.config set cluster_version = cluster_version + 1;
 
 	raise notice 'partition % activated', id_partition;
 
@@ -425,51 +474,14 @@ $$ language plpgsql;
 get_items makes a query across all partitions based on criteria which is not
 in the primary key.
 
-In a traditional PL/Proxy installation, this would be 
-
-CLUSTER 'items'; 
-RUN ON ALL;
-
-However, in our case, we can't use the above code because the number of
-partitions has to be a power of two, which is not guaranteed in this system.
-
-As a result, at the moment, get_items calls each partition in order, which
-of course is not ideal. This function is not currently used by the load tester.
-
 */
 CREATE OR REPLACE FUNCTION public.get_items(IN owners bigint[], OUT iditem uuid, OUT description text, OUT "owner" bigint, OUT v integer)
   RETURNS SETOF record AS
 $$
-declare
-	partition record;
-	total_range uuid;
-	num_ranges integer;
 begin
-
-	num_ranges := 0;
-	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
-
-	for partition in 
-		select * from plproxy.partitions where name='items' and read_start is not null
-	loop
-		return query select * from private.get_items(owners, partition.read_start, partition.read_end, partition.connstr);
-		
-		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
-		
-		num_ranges := num_ranges + 1;
-		
-	end loop;
-	
-	if(num_ranges = 0) then
-		raise exception 'no ranges found for items in the DB!';
-	end if;
-	
-	if plproxy.uuid_add(total_range, num_ranges-1)::uuid != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
-		raise exception 'Total UUID range % is not equal to enture range 32*f', total_range;
-	end if;
-	
+    select * from private.get_items(owners);
 end;
-$$ language plpgsql;
+$$ language sql;
 
 /*
 
