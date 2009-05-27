@@ -33,7 +33,7 @@ items
 }}}
 The reason that the queueing logic is implemented at the data storage level is because the write is stored in the queue in the form of an 'insert' or 'update' statement. Although moving the queueing logic to items_proxy would consolidate all repartitioning logic in one database, it also makes sense to keep all code directly referencing the storage structure in the same database.
 
-The bakup/restore code is currently a three-line PL/python procedure that dumps the current database and restores it to a new one.
+The backup/restore code is currently a three-line PL/python procedure that dumps the current database and restores it to a new one.
 
 All dblink functions are stored in a separate schema. The standard dblink installation script has been modified to to this, and is included in the release.
 
@@ -42,7 +42,7 @@ The SQL files that define both database are heavily commented, so each piece of 
  # A read arrives from a client at items_proxy.public.
  # The function in items_proxy.public computes which partition(s) the read must run on by executing a select query against plproxy.partitions, and calls the private function with the partion connection strings as arguments. Also included in the call to the private function is the range information for the target partition.
  # The private function then proxies the procedure call to the target partition.
- # The read arrives at the items.private database, where it's executed against the database, and the results travel back through the proxy/
+ # The read arrives at the items.private database, where it's executed against the database, and the results travel back through the proxy.
 
 Writes are similar, except that a write may enter a spinlock at step 2, must only be executed on one partition, and may also copy the write statement to a queue at step 4.
 
@@ -52,7 +52,7 @@ The repartitioning process itself is implemented as a PL/PgSQL stored procedure,
 
 At two points in the process it's necessary to make changes with immediate effect inside of a PL/PgSQL function. Because transactions inside PL/PgSQL functions aren't possible, a loop-back dblink has to be used for this, even though it's a disgusting hack.
 
-When the 'write queue' is initally read from, before the partition table is updated for the first time, it is still being written to by the old partition. For this reason the read loop cannot use the emptiness of the queue as the test to break the read loop. Instead of this, we use the maximum call ID at the time of entering the procedure as the point at which to stop. This could be achieved by opening a cursor, but apparently the open cursor interferes with the subsequent delete of the processed writes, which in turn prevents the write queue from being removed at the end. (See this mail for the bug report.)
+When the 'write queue' is initally read from, before the partition table is updated for the first time, it is still being written to by the old partition. For this reason the read loop cannot use the emptiness of the queue as the test to break the read loop.
 
 ----------------------------
 
