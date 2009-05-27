@@ -5,6 +5,14 @@
 	use SELECT at PL/Proxy level to pass the function
 	to the partition without the connection string.
 	(try, records seem difficult)
+	
+	two alternatives: 
+	  1) lock reads during the delete of the discarded half of the old partition
+	  2) adapt PL/Proxy to pass the range start/end (or more generally, any parameter)
+	     to a query executed with RUN ON x.
+	
+			add_connection would need to take the entire row
+			cluster.c check at 281 would need extending
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
