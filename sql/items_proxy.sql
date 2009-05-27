@@ -81,7 +81,7 @@ BEGIN
 	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
 
 	for partition in 
-        select connstr from plproxy.partitions where name = cluster_name and read_start is not null
+        select * from plproxy.partitions where name = cluster_name and read_start is not null
 	loop
 		return next partition.connstr;
 
@@ -385,11 +385,11 @@ connection string specified in the connstr argument.
 CREATE SCHEMA private;
 
 create or replace function private.insert_item(i_iditem uuid, i_description text, i_owner bigint, range_start uuid, range_end uuid, connstr text) returns integer as $$
-connect oonnstr;
+connect connstr;
 $$ language plproxy;
 
 create or replace function private.update_item(i_iditem uuid, i_description text, i_v int, range_start uuid, range_end uuid, connstr text) returns integer as $$
-connect oonnstr;
+connect connstr;
 $$ language plproxy;
 
 create or replace function private.get_items(owners bigint[], out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
