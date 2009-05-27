@@ -7,7 +7,7 @@
 
 The following packages need to be installed:
 
- # PL/Proxy, v2.0.7 or higher
+ # PL/Proxy, v2.0.8
  # plpythonu (and therefore a recent 2.5-series Python package)
  # dblink, installed via the customized script included in the package
 
