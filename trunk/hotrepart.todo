@@ -1,10 +1,13 @@
 		
-	adapt broad items to use run on all
-	get_cluster_partitions should return proper list,
-	 - get_cluster_version should have table behind it, inced by split_partition
-	use SELECT at PL/Proxy level to pass the function
-	to the partition without the connection string.
+test	adapt broad items to use run on all
+test	get_cluster_partitions should return proper list,
+test	 - get_cluster_version should have table behind it, inced by split_partition
+	use SELECT at PL/Proxy level to pass the function parameters to the partition without the connection string.
 	(try, records seem difficult)
+    
+    PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
+     workaround is to lock reads before we delete the old records in the range,
+     then unlock. locking would have to be done in get_partition_clusters...
 	
 	two alternatives: 
 	  1) lock reads during the delete of the discarded half of the old partition
