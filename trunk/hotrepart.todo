@@ -8,6 +8,15 @@ test	 - get_cluster_version should have table behind it, inced by split_partitio
     PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
      workaround is to lock reads before we delete the old records in the range,
      then unlock. locking would have to be done in get_partition_clusters...
+
+	datatypes added to plproxy.h
+	 -> should param_names/types be at ProxyCluster level, 
+	     -> lookup index for taking values from ProxyConnection
+	
+	variable assigning / freeing done in cluster.c
+		reload_parts, add_connection, free_connlist
+	
+	TODO parameter name & value copying into conn->param_names/values
 	
 	two alternatives: 
 	  1) lock reads during the delete of the discarded half of the old partition
