@@ -1,24 +1,28 @@
 
-fix warnings - learn to use pointers correctly!
+	fix warnings - learn to use pointers correctly!
 		
-test	adapt broad items to use run on all
-test	get_cluster_partitions should return proper list,
-test	 - get_cluster_version should have table behind it, inced by split_partition
+X	test	adapt broad items to use run on all
+X	test	get_cluster_partitions should return proper list,
+X	test	 - get_cluster_version should have table behind it, inced by split_partition
 	use SELECT at PL/Proxy level to pass the function parameters to the partition without the connection string.
 	(try, records seem difficult)
+
+logging
+    fprintf(stderr, "%s", "foo");
     
-    PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
+     PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
      workaround is to lock reads before we delete the old records in the range,
      then unlock. locking would have to be done in get_partition_clusters...
 
-	datatypes added to plproxy.h
-	 -> should param_names/types be at ProxyCluster level, 
-	     -> lookup index for taking values from ProxyConnection
-	
-	variable assigning / freeing done in cluster.c
-		reload_parts, add_connection, free_connlist
-	
-	TODO parameter name & value copying into conn->param_names/values
+test	datatypes added to plproxy.h
+test	 -> should param_names/types be at ProxyCluster level, 
+test	     -> lookup index for taking values from ProxyConnection
+test	variable assigning / freeing done in cluster.c
+test		reload_parts, add_connection, free_connlist
+test	TODO parameter name & value copying into conn->param_names/values
+	adapt plproxy_find_type_info_ctx
+
+		log retrieved parameters, confirm that reloading the table reloads the parameters
 	
 	two alternatives: 
 	  1) lock reads during the delete of the discarded half of the old partition
