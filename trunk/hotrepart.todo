@@ -1,3 +1,5 @@
+
+fix warnings - learn to use pointers correctly!
 		
 test	adapt broad items to use run on all
 test	get_cluster_partitions should return proper list,
