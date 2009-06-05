@@ -20,9 +20,11 @@ test	     -> lookup index for taking values from ProxyConnection
 test	variable assigning / freeing done in cluster.c
 test		reload_parts, add_connection, free_connlist
 test	TODO parameter name & value copying into conn->param_names/values
-	adapt plproxy_find_type_info_ctx
+test	adapt plproxy_find_type_info_ctx
 
 		log retrieved parameters, confirm that reloading the table reloads the parameters
+		
+		  -> need to return the same record multiple times at end of get_cluster_partitions
 	
 	two alternatives: 
 	  1) lock reads during the delete of the discarded half of the old partition

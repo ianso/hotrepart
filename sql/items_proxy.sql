@@ -67,13 +67,13 @@ Retrieves cluster connection strings for a given cluster.
 We pad the result to return a number of results to the power of two.
 
 */
-CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
-RETURNS SETOF text AS $$
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text, out connstr text, out read_start text, out read_end text)
+RETURNS SETOF record AS $$
 declare
 	total_range uuid;
 	num_ranges integer;
 	closest_power   int4;
-	last_connstr    text;
+	last_record   record;
 	partition       record;
 BEGIN
 
@@ -81,14 +81,14 @@ BEGIN
 	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
 
 	for partition in 
-        select * from plproxy.partitions where name = cluster_name and read_start is not null
+        select connstr, read_start, read_end from plproxy.partitions where name = cluster_name and read_start is not null
 	loop
-		return next partition.connstr;
+		return next;
 
 		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
 		num_ranges := num_ranges + 1;
 
-		last_connstr := partition.connstr;
+		last_record := partition;
 	end loop;
 
 	if(num_ranges = 0) then
@@ -111,7 +111,7 @@ BEGIN
 	end loop;
 
 	while num_ranges < closest_power loop
-		return next last_connstr;
+		return next last_record;
 		num_ranges := num_ranges + 1;
 	end loop;
 		
