@@ -1,30 +1,17 @@
 
-	fix warnings - learn to use pointers correctly!
-		
-X	test	adapt broad items to use run on all
-X	test	get_cluster_partitions should return proper list,
-X	test	 - get_cluster_version should have table behind it, inced by split_partition
 	use SELECT at PL/Proxy level to pass the function parameters to the partition without the connection string.
 	(try, records seem difficult)
 
 logging
     fprintf(stderr, "%s", "foo");
     
-     PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
-     workaround is to lock reads before we delete the old records in the range,
-     then unlock. locking would have to be done in get_partition_clusters...
-
-test	datatypes added to plproxy.h
-test	 -> should param_names/types be at ProxyCluster level, 
-test	     -> lookup index for taking values from ProxyConnection
 test	variable assigning / freeing done in cluster.c
-test		reload_parts, add_connection, free_connlist
 test	TODO parameter name & value copying into conn->param_names/values
-test	adapt plproxy_find_type_info_ctx
 
-		log retrieved parameters, confirm that reloading the table reloads the parameters
-		
+test		log retrieved parameters, confirm that reloading the table reloads the parameters	
 		  -> need to return the same record multiple times at end of get_cluster_partitions
+		  
+		  problem: printing the values doesn't seem to work...
 	
 	two alternatives: 
 	  1) lock reads during the delete of the discarded half of the old partition
@@ -380,3 +367,16 @@ X	 - fully-qualified internal non-wiki links?
 X   ========release when married
 X   ========actual release
 X   ========after release
+X	fix warnings - learn to use pointers correctly!		
+X	test	adapt broad items to use run on all
+X	test	get_cluster_partitions should return proper list,
+X	test	 - get_cluster_version should have table behind it, inced by split_partition
+X     PROBLEM, need to pass UUID ranges to the clusters for run on all... or not?
+X    workaround is to lock reads before we delete the old records in the range,
+X     then unlock. locking would have to be done in get_partition_clusters...
+X test	datatypes added to plproxy.h
+X test	 -> should param_names/types be at ProxyCluster level, 
+X test	     -> lookup index for taking values from ProxyConnection
+X test		reload_parts, add_connection, free_connlist
+X test	adapt plproxy_find_type_info_ctx
+
