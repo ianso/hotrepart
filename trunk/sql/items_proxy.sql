@@ -67,36 +67,35 @@ Retrieves cluster connection strings for a given cluster.
 We pad the result to return a number of results to the power of two.
 
 */
-CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text, out connstr text, out read_start text, out read_end text)
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text, out connstr text, out read_start uuid, out read_end uuid)
 RETURNS SETOF record AS $$
 declare
 	total_range uuid;
 	num_ranges integer;
 	closest_power   int4;
-	last_record   record;
-	partition       record;
-BEGIN
-
+	last_connstr   text;
+BEGIN
 	num_ranges := 0;
 	total_range := '00000000-0000-0000-0000-000000000000'::uuid;
-
-	for partition in 
-        select connstr, read_start, read_end from plproxy.partitions where name = cluster_name and read_start is not null
-	loop
-		return next;
-
-		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(partition.read_end, partition.read_start)::uuid);
+	
+	for connstr, read_start, read_end in 
+        select partitions.connstr, partitions.read_start, partitions.read_end
+        from plproxy.partitions
+        where partitions.name = cluster_name and partitions.read_start is not null	loop		
+		total_range := plproxy.uuid_add(total_range, plproxy.uuid_difference(read_end, read_start)::uuid);
 		num_ranges := num_ranges + 1;
-
-		last_record := partition;
+		last_connstr := connstr;
+		return next;
 	end loop;
 
-	if(num_ranges = 0) then
-		raise exception 'no ranges found for items in the DB for cluster %!', cluster_name;
+	if num_ranges = 0 then
+		raise exception 'no ranges found in the DB for cluster %!', cluster_name;
 	end if;
 
-	if plproxy.uuid_add(total_range, num_ranges-1)::uuid != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
-		raise exception 'Total UUID range % is not equal to enture range 32*f for cluster %', total_range, cluster_name;
+	if plproxy.uuid_add(total_range, num_ranges-1)::uuid
+	  != 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid then
+		raise exception 'Total UUID range % is not equal to enture range 32*f for cluster %', 
+			total_range, cluster_name;
 	end if;
 
 	closest_power := 1;
@@ -109,12 +108,26 @@ BEGIN
 		closest_power := closest_power * 2;
 		exit when closest_power >= num_ranges;
 	end loop;
-
-	while num_ranges < closest_power loop
-		return next last_record;
-		num_ranges := num_ranges + 1;
-	end loop;
-		
+	
+	/*
+	 
+	this brings the total number of connections up to the required
+	power-of-two necessary to make PL/Proxy think its doing 
+	hash-based partitioning... 
+	
+	*/
+	
+	if closest_power > num_ranges then
+		for connstr, read_start, read_end in
+			select partitions.connstr, partitions.read_start, partitions.read_end
+			from plproxy.partitions, generate_series(1, closest_power - num_ranges)
+			where connstr = last_connstr
+			and name = cluster_name
+		loop
+			return next;
+		end loop;
+	end if;
+	
 END;
 $$ LANGUAGE plpgsql;
 
