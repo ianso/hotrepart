@@ -1,25 +1,17 @@
-
-	use SELECT at PL/Proxy level to pass the function parameters to the partition without the connection string.
+	use SELECT at PL/Proxy level to pass the function parameters 
+	to the partition without the connection string.
 	(try, records seem difficult)
 
 logging
     fprintf(stderr, "%s", "foo");
+
+	adapt stuff in plproxy_exec
     
 test	variable assigning / freeing done in cluster.c
-test	TODO parameter name & value copying into conn->param_names/values
-
+test	TODO parameter name & value copying into conn->param_values
 test		log retrieved parameters, confirm that reloading the table reloads the parameters	
-		  -> need to return the same record multiple times at end of get_cluster_partitions
-		  
+X		  -> need to return the same record multiple times at end of get_cluster_partitions 
 		  problem: printing the values doesn't seem to work...
-	
-	two alternatives: 
-	  1) lock reads during the delete of the discarded half of the old partition
-	  2) adapt PL/Proxy to pass the range start/end (or more generally, any parameter)
-	     to a query executed with RUN ON x.
-	
-			add_connection would need to take the entire row
-			cluster.c check at 281 would need extending
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -379,4 +371,10 @@ X test	 -> should param_names/types be at ProxyCluster level,
 X test	     -> lookup index for taking values from ProxyConnection
 X test		reload_parts, add_connection, free_connlist
 X test	adapt plproxy_find_type_info_ctx
+X	two alternatives: 
+X	  1) lock reads during the delete of the discarded half of the old partition
+X	  2) adapt PL/Proxy to pass the range start/end (or more generally, any parameter)
+X	     to a query executed with RUN ON x.	
+X			add_connection would need to take the entire row
+X			cluster.c check at 281 would need extending
 
