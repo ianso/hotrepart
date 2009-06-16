@@ -1,3 +1,49 @@
+
+	 	
+
+	plproxy_query_start_cluster
+	 -> needs to have ProxyCluster on QueryBuffer struct?
+	 
+	plproxy_query_add_ident_cluster
+	 -> needs to search cluster params as well as function call
+
+	adapt parser.y 
+	 - primary parser doesn't parse arguments in select SQL statement
+	 - secondary parser does, 
+	 	uses function in addition to ProxyCluster context to launch fill
+	 	add_query_ident needs reworking to optionally need/use func
+	 	
+	 send_query in query.c
+	  - must have cluster passed
+	  - must invoke parser to get variables
+	  - variables inside connection have to be set in send_query, meaning cluster must be passed
+		to add second method for SQL statements only,
+		
+		and plproxy_send_type has to be made in two locations?
+	
+           
+X    appendStringInfoString(q->sql, ident);
+X    --> add_types is true in SELECT only
+X	func is only passed to add_ref for typename
+X	  --> abstract out, since type comes from ProxyCluster too now
+X	plproxy_query_add_ident now takes optional connection
+
+    ??? no harm in making
+
+    } else { //fn_idx == -1
+
+        //for loop to get sql_idx
+
+        sql_idx = q->arg_count++;
+        q->arg_lookup[sql_idx] = -1;
+        -->add ref
+       
+        (-1 for if block in execute.c line 785)
+       
+    but, problem:
+
+        q->arg_lookup = palloc(sizeof(int) * func->arg_count);
+
 	use SELECT at PL/Proxy level to pass the function parameters 
 	to the partition without the connection string.
 	(try, records seem difficult)
@@ -12,6 +58,16 @@ test	TODO parameter name & value copying into conn->param_values
 test		log retrieved parameters, confirm that reloading the table reloads the parameters	
 X		  -> need to return the same record multiple times at end of get_cluster_partitions 
 		  problem: printing the values doesn't seem to work...
+
+    document for two variable names:
+    current_user, session_user,
+
+    bug 1) variable name substitution
+     - query.c add_ref -> tmp[32]???
+       if data type is
+           "timestamp (6) without time zone"
+           --> 31 characters
+    bug the second, if you have a parameter named the same as a function in a select...?
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -377,4 +433,6 @@ X	  2) adapt PL/Proxy to pass the range start/end (or more generally, any parame
 X	     to a query executed with RUN ON x.	
 X			add_connection would need to take the entire row
 X			cluster.c check at 281 would need extending
+X    !!!!!QQQ does
+X yes        CONNECT str('foo', current_database()) work?
 
