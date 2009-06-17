@@ -411,7 +411,7 @@ run on all;
 $$ language plproxy;
 
 create or replace function private.get_item(i_iditem uuid, range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
-connect connstr;
+connect plproxy.str(plproxy.str(connstr));
 $$ language plproxy;
 
 
