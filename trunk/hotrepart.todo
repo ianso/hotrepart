@@ -18,8 +18,7 @@ execute.c 814
 		to add second method for SQL statements only,
 		
 		and plproxy_send_type has to be made in two locations?
-	
-           
+	           
 X    appendStringInfoString(q->sql, ident);
 X    --> add_types is true in SELECT only
 X	func is only passed to add_ref for typename

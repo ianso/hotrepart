@@ -410,8 +410,10 @@ cluster 'items';
 run on all;
 $$ language plproxy;
 
+--connect plproxy.str(plproxy.str(connstr));
+
 create or replace function private.get_item(i_iditem uuid, range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
-connect plproxy.str(plproxy.str(connstr));
+connect connstr;
 $$ language plproxy;
 
 
