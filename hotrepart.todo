@@ -1,15 +1,13 @@
 
-	 	
-
-	plproxy_query_start_cluster
-	 -> needs to have ProxyCluster on QueryBuffer struct?
-	 
+execute.c 814
+ 
 	plproxy_query_add_ident_cluster
 	 -> needs to search cluster params as well as function call
 
 	adapt parser.y 
-	 - primary parser doesn't parse arguments in select SQL statement
-	 - secondary parser does, 
+	 - primary parser parses function arguments in select SQL statement
+	from execute.c
+	 - secondary parser parses cluster arguments, get indexes only,
 	 	uses function in addition to ProxyCluster context to launch fill
 	 	add_query_ident needs reworking to optionally need/use func
 	 	
@@ -435,4 +433,6 @@ X			add_connection would need to take the entire row
 X			cluster.c check at 281 would need extending
 X    !!!!!QQQ does
 X yes        CONNECT str('foo', current_database()) work?
+X test	plproxy_query_start_cluster
+X test	 -> needs to have ProxyCluster on QueryBuffer struct?
 
