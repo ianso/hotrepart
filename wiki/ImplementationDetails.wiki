@@ -9,7 +9,7 @@ This page explains the high-level design choices made in the implementing the on
 
 == Platform choices ==
 
-The hot repartitioning rocess is implemented on PostgreSQl using PL/Proxy along with dblink and plpython.
+The hot repartitioning process is implemented on PostgreSQl using PL/Proxy along with dblink and plpython.
 
 PostgreSQL was chosen because it was open source, and has PL/Proxy, which is a relatively flexible, light, production-quality tool. The only other database I investigated was MySQL, but MySQLProxy, which, although far more flexible, is alpha-quality and lacks the ability to reconfigure the proxy to use new databases at runtime.
 
