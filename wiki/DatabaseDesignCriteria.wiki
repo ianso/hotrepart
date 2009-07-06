@@ -11,7 +11,7 @@ In addition to that, there are other criteria that have to be followed in order 
 
 == Principle 1: the partition key has a wide and pseudo-random^[0]^ distribution throughout the key-space, and joins do not cross partitions ==
 
-The basics of database horizontal partitioning are already well understood. Choose a column, and depending on the value of the column, send the row to a different database server. The client has a lookup of which column values, or range of values, go to which server.
+The basics of database horizontal range-based partitioning are already well understood. Choose a column, and depending on the value of the column, send the row to a different database server. The client has a lookup of which column values, or range of values, go to which server.
 
 The sample schema used in this project works along exactly the same principle. In this case, there is one table "items", which has a client-generated UUID as its primary key^[1]^. As a starting point, this table is already easily partitionable across multiple databases if we treat the UUID-space as a range:
 
