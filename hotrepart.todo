@@ -1,45 +1,12 @@
 
-execute.c 814
- 
 	plproxy_query_add_ident_cluster
 	 -> needs to search cluster params as well as function call
 
-	adapt parser.y 
-	 - primary parser parses function arguments in select SQL statement
-	from execute.c
-	 - secondary parser parses cluster arguments, get indexes only,
-	 	uses function in addition to ProxyCluster context to launch fill
-	 	add_query_ident needs reworking to optionally need/use func
-	 	
 	 send_query in query.c
-	  - must have cluster passed
-	  - must invoke parser to get variables
 	  - variables inside connection have to be set in send_query, meaning cluster must be passed
-		to add second method for SQL statements only,
-		
 		and plproxy_send_type has to be made in two locations?
 	           
-X    appendStringInfoString(q->sql, ident);
-X    --> add_types is true in SELECT only
-X	func is only passed to add_ref for typename
-X	  --> abstract out, since type comes from ProxyCluster too now
-X	plproxy_query_add_ident now takes optional connection
-
     ??? no harm in making
-
-    } else { //fn_idx == -1
-
-        //for loop to get sql_idx
-
-        sql_idx = q->arg_count++;
-        q->arg_lookup[sql_idx] = -1;
-        -->add ref
-       
-        (-1 for if block in execute.c line 785)
-       
-    but, problem:
-
-        q->arg_lookup = palloc(sizeof(int) * func->arg_count);
 
 	use SELECT at PL/Proxy level to pass the function parameters 
 	to the partition without the connection string.
@@ -50,8 +17,6 @@ logging
 
 	adapt stuff in plproxy_exec
     
-test	variable assigning / freeing done in cluster.c
-test	TODO parameter name & value copying into conn->param_values
 test		log retrieved parameters, confirm that reloading the table reloads the parameters	
 X		  -> need to return the same record multiple times at end of get_cluster_partitions 
 		  problem: printing the values doesn't seem to work...
@@ -65,6 +30,8 @@ X		  -> need to return the same record multiple times at end of get_cluster_part
            "timestamp (6) without time zone"
            --> 31 characters
     bug the second, if you have a parameter named the same as a function in a select...?
+    
+    bug the third, if you already casted the variable 1$::xxx, it gets added again on a SELECT
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -434,4 +401,31 @@ X    !!!!!QQQ does
 X yes        CONNECT str('foo', current_database()) work?
 X test	plproxy_query_start_cluster
 X test	 -> needs to have ProxyCluster on QueryBuffer struct?
+X	adapt parser.y 
+X	 - primary parser parses function arguments in select SQL statement
+X	from execute.c
+X	 - secondary parser parses cluster arguments, get indexes only,
+X	 	uses function in addition to ProxyCluster context to launch fill
+X	 	add_query_ident needs reworking to optionally need/use func	 	
+X	  - must have cluster passed
+X	  - must invoke parser to get variables
+X		to add second method for SQL statements only,
+X	do real test
+X	arg_count
+X	execute.c 814
+X    appendStringInfoString(q->sql, ident);
+X    --> add_types is true in SELECT only
+X	func is only passed to add_ref for typename
+X	  --> abstract out, since type comes from ProxyCluster too now
+X	plproxy_query_add_ident now takes optional connection
+X    } else { //fn_idx == -1
+X        //for loop to get sql_idx
+X        sql_idx = q->arg_count++;
+X       q->arg_lookup[sql_idx] = -1;
+X        -->add ref     
+X        (-1 for if block in execute.c line 785)      
+X    but, problem:
+X        q->arg_lookup = palloc(sizeof(int) * func->arg_count);
+X test	variable assigning / freeing done in cluster.c
+X test	TODO parameter name & value copying into conn->param_values
 
