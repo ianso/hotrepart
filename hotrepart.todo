@@ -1,4 +1,12 @@
 
+	add if for add_types in add_ident
+	why not added to arry?
+	add arg resolution for <0
+	more tests
+	docs
+	bugs?
+	email
+
 	plproxy_query_add_ident_cluster
 	 -> needs to search cluster params as well as function call
 
