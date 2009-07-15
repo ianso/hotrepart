@@ -1,34 +1,11 @@
 
-	add if for add_types in add_ident
-	why not added to arry?
-	add arg resolution for <0
 	more tests
-	docs
+>>>>	docs
 	bugs?
+	remove all the printfs
+	patch
 	email
-
-	plproxy_query_add_ident_cluster
-	 -> needs to search cluster params as well as function call
-
-	 send_query in query.c
-	  - variables inside connection have to be set in send_query, meaning cluster must be passed
-		and plproxy_send_type has to be made in two locations?
-	           
-    ??? no harm in making
-
-	use SELECT at PL/Proxy level to pass the function parameters 
-	to the partition without the connection string.
-	(try, records seem difficult)
-
-logging
-    fprintf(stderr, "%s", "foo");
-
-	adapt stuff in plproxy_exec
-    
-test		log retrieved parameters, confirm that reloading the table reloads the parameters	
-X		  -> need to return the same record multiple times at end of get_cluster_partitions 
-		  problem: printing the values doesn't seem to work...
-
+ 
     document for two variable names:
     current_user, session_user,
 
@@ -37,9 +14,11 @@ X		  -> need to return the same record multiple times at end of get_cluster_part
        if data type is
            "timestamp (6) without time zone"
            --> 31 characters
+
     bug the second, if you have a parameter named the same as a function in a select...?
     
     bug the third, if you already casted the variable 1$::xxx, it gets added again on a SELECT
+     -> could this cause syntax bugs? I think so... (change add_type to true on reparsing)
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -55,12 +34,6 @@ X		  -> need to return the same record multiple times at end of get_cluster_part
 		add something to log the average time difference between write and read. (should be small)
 		and the average duration of a write and read
 
-	stuff I'd like to add to PL/Proxy
-		CONNECT $1/function
-and
-		connect select connstr from plproxy.partitions where read_start <= $1 an read_end >= $1
-or		connect select get_write_connstr(id_item);
-or		run on select connstr from plproxy.partitions where 
 
 	ec2:
 	 - cost calculator (use scale model, not simple javascripts)
@@ -436,4 +409,35 @@ X    but, problem:
 X        q->arg_lookup = palloc(sizeof(int) * func->arg_count);
 X test	variable assigning / freeing done in cluster.c
 X test	TODO parameter name & value copying into conn->param_values
+X	stuff I'd like to add to PL/Proxy
+X		CONNECT $1/function
+X and
+X		connect select connstr from plproxy.partitions where read_start <= $1 an read_end >= $1
+X or		connect select get_write_connstr(id_item);
+X or		run on select connstr from plproxy.partitions where 
+X	add if for add_types in add_ident
+X	why not added to arry? it is, and causes sig11 :-)
+X	add arg resolution for <0
+X	plproxy_query_add_ident_cluster
+X	 -> needs to search cluster params as well as function call
+X	 send_query in query.c
+X	  - variables inside connection have to be set in send_query, meaning cluster must be passed
+X		and plproxy_send_type has to be made in two 
+X	??? no harm in making
+X	use SELECT at PL/Proxy level to pass the function parameters 
+X	to the partition without the connection string.
+X no	(try, records seem difficult)
+X	logging
+X   fprintf(stderr, "%s", "foo");
+X	adapt stuff in plproxy_exec 
+X		  -> need to return the same record multiple times at end of get_cluster_partitions 
+X	currently storing the cluster parameter value as Datum,
+X	but we should be receiving it via plproxy_recv_type.
+X	This needs a ProxyType with for_send = false, so either
+X	a) store two proxytypes per parameter, one in each direction, or
+X	b) just use SPI_getvalue and ignore the types since they're not
+X	   needded with string reps, but
+X	     - what about blobs & other non-text characters?
+X test		log retrieved parameters, confirm that reloading the table reloads the parameters	
+X	  problem: printing the values doesn't seem to work...
 
