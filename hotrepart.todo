@@ -1,4 +1,7 @@
 
+	the parameter logic in remote_execyte should be moved down to send_query, since
+	it overwrites before it's sent...
+
 	more tests
 >>>>	docs
 	bugs?
