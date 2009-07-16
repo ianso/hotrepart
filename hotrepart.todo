@@ -1,11 +1,7 @@
 
-	the parameter logic in remote_execyte should be moved down to send_query, since
-	it overwrites before it's sent...
+	the patch needs cleaning up and so does the code.
 
-	more tests
->>>>	docs
 	bugs?
-	remove all the printfs
 	patch
 	email
  
@@ -443,4 +439,9 @@ X	   needded with string reps, but
 X	     - what about blobs & other non-text characters?
 X test		log retrieved parameters, confirm that reloading the table reloads the parameters	
 X	  problem: printing the values doesn't seem to work...
+X	the parameter logic in remote_execyte should be moved down to send_query, since
+X	it overwrites before it's sent...
+X	more tests
+X	>>>>	docs
+X	remove all the printfs
 
