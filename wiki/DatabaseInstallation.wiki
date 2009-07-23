@@ -22,7 +22,11 @@ wget http://pgfoundry.org/frs/download.php/2053/plproxy-2.0.8.tar.gz
 tar -xvf plproxy-2.0.8.tar.gz
 cd plproxy-2.0.8
 #patches to add functionality and fix bugs (do this for 2.0.8 ONLY)
-patch -p0 < ../hotrepart/patches/*.patch
+#must be in this order
+patch -p1 < ../hotrepart/patches/plproxy-select-paren.patch
+patch -p1 < ../hotrepart/patches/plproxy-select-func-dot.patch
+patch -p0 < ../hotrepart/patches/connect.2.0.8.patch
+patch -p0 < ../hotrepart/patches/connstr_params.patch
 make
 sudo make install
 }}}
