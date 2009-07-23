@@ -11,7 +11,7 @@ The following packages need to be installed:
  # plpythonu (and therefore a recent 2.5-series Python package)
  # dblink, installed via the customized script included in the package
 
-As of writing, PL/Proxy needs a small patch applied to it, and so generally needs to be installed from source, which also then requires make, flex, bison, and the development extensions to PostgreSQL. Under Debian-based systems such as Ubuntu, assuming PostgreSQL and Python is already installed, then this would be an example installation.
+As of writing, PL/Proxy several small patches applied to it, and so generally needs to be installed from source, which also then requires make, flex, bison, and the development extensions to PostgreSQL. Under Debian-based systems such as Ubuntu, assuming PostgreSQL and Python is already installed, then this would be an example installation.
 
 {{{
 #installs dblink, plpython, and the pre-requisites for PL/Proxy:
@@ -21,8 +21,8 @@ sudo apt-get install make flex bison postgresql-server-dev-8.3 postgresql-contri
 wget http://pgfoundry.org/frs/download.php/2053/plproxy-2.0.8.tar.gz
 tar -xvf plproxy-2.0.8.tar.gz
 cd plproxy-2.0.8
-#patches to add connect functionality (do this for 2.0.8 ONLY)
-patch -p0 < ../hotrepart/connect.2.0.8.diff
+#patches to add functionality and fix bugs (do this for 2.0.8 ONLY)
+patch -p0 < ../hotrepart/patches/*.patch
 make
 sudo make install
 }}}
