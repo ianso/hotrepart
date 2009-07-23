@@ -240,8 +240,7 @@ were not applied.
 
 */
 
-
-create or replace function private.get_items(owners bigint[], range_start uuid, range_end uuid, connstr text, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
+create or replace function private.get_items(owners bigint[], range_start uuid, range_end uuid, out iditem uuid, out description text, out owner bigint, out v int) returns setof record as $$
 begin
 	for iditem, description, owner, v in 
 		select 
