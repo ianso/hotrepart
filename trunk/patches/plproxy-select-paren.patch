@@ -1,0 +1,44 @@
+--- postgresql-plproxy-2.0.8.orig/src/scanner.l
++++ postgresql-plproxy-2.0.8/src/scanner.l
+@@ -183,6 +183,8 @@
+ 
+ 	/* function call */
+ 
++	/* not a function call if starting with SELECT; rule must be first */
++select{SPACE}*[(]	{ yyless(6); BEGIN(sql); yylval.str = yytext; return SELECT; }
+ {IDENT}{SPACE}*[(]	{ BEGIN(sql); yylval.str = yytext; return FNCALL; }
+ 
+ 	/* PL/Proxy language comments/whitespace */
+--- postgresql-plproxy-2.0.8.orig/sql/plproxy_select.sql
++++ postgresql-plproxy-2.0.8/sql/plproxy_select.sql
+@@ -35,3 +35,12 @@
+ 
+ select * from test_select_err('user', true);
+ 
++
++create function get_zero()
++returns setof integer as $x$
++    cluster 'testcluster';
++    run on all;
++    select (0*0);
++$x$ language plproxy;
++
++select * from get_zero();
+--- postgresql-plproxy-2.0.8.orig/expected/plproxy_select.out
++++ postgresql-plproxy-2.0.8/expected/plproxy_select.out
+@@ -35,3 +35,15 @@
+ $$ language plproxy;
+ select * from test_select_err('user', true);
+ ERROR:  PL/Proxy function public.test_select_err(2): Compile error at line 5: Only one SELECT statement allowed
++create function get_zero()
++returns setof integer as $x$
++    cluster 'testcluster';
++    run on all;
++    select (0*0);
++$x$ language plproxy;
++select * from get_zero();
++ get_zero 
++----------
++        0
++(1 row)
++
