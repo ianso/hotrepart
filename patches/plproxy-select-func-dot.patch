@@ -1,0 +1,79 @@
+diff --git a/expected/plproxy_select.out b/expected/plproxy_select.out
+index f8317a2..352c829 100644
+--- a/expected/plproxy_select.out
++++ b/expected/plproxy_select.out
+@@ -47,3 +47,28 @@ select * from get_zero();
+         0
+ (1 row)
+ 
++\c test_part
++create table numbers (
++    num int,
++    name text
++);
++insert into numbers values (1, 'one');
++insert into numbers values (2, 'two');
++create function ret_numtuple(int)
++returns numbers as $x$
++    select num, name from numbers where num = $1;
++$x$ language sql;
++\c regression
++create type numbers_type as (num int, name text);
++create function get_one()
++returns setof numbers_type as $x$
++    cluster 'testcluster';
++    run on all;
++    select (ret_numtuple(1)).num, (ret_numtuple(1)).name;
++$x$ language plproxy;
++select * from get_one();
++ num | name 
++-----+------
++   1 | one
++(1 row)
++
+diff --git a/sql/plproxy_select.sql b/sql/plproxy_select.sql
+index 529ccc2..6bf0f00 100644
+--- a/sql/plproxy_select.sql
++++ b/sql/plproxy_select.sql
+@@ -44,3 +44,28 @@ returns setof integer as $x$
+ $x$ language plproxy;
+ 
+ select * from get_zero();
++
++\c test_part
++create table numbers (
++    num int,
++    name text
++);
++insert into numbers values (1, 'one');
++insert into numbers values (2, 'two');
++
++create function ret_numtuple(int)
++returns numbers as $x$
++    select num, name from numbers where num = $1;
++$x$ language sql;
++
++\c regression
++create type numbers_type as (num int, name text);
++
++create function get_one()
++returns setof numbers_type as $x$
++    cluster 'testcluster';
++    run on all;
++    select (ret_numtuple(1)).num, (ret_numtuple(1)).name;
++$x$ language plproxy;
++
++select * from get_one();
+diff --git a/src/scanner.l b/src/scanner.l
+index ad6ed37..6b87baf 100644
+--- a/src/scanner.l
++++ b/src/scanner.l
+@@ -162,7 +162,7 @@ SQLNUM		[0-9][.0-9]*
+  *
+  * Excludes: [$'";`]
+  */
+-SQLSYM		[-!#%&()*+,/:<=>?@\[\]^{|}~]
++SQLSYM		[-!#%&()*+,/:<=>?@\[\]^{|}~.]
+ 
+ /* Dollar quote ID */
+ DOLQ_START      [a-z\200-\377_]

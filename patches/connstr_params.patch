@@ -1,0 +1,1123 @@
+Index: sql/plproxy_many.sql
+===================================================================
+--- sql/plproxy_many.sql	(revision 188)
++++ sql/plproxy_many.sql	(revision 244)
+@@ -7,14 +7,15 @@
+     raise exception 'no such cluster: %', cluster_name;
+ end; $$ language plpgsql;
+ 
+-create or replace function plproxy.get_cluster_partitions(cluster_name text)
+-returns setof text as $$
++drop function plproxy.get_cluster_partitions(text);
++create or replace function plproxy.get_cluster_partitions(cluster_name text, out conn_str text, out conn_nr int)
++returns setof record as $$
+ begin
+     if cluster_name = 'testcluster' then
+-        return next 'host=127.0.0.1 dbname=test_part0';
+-        return next 'host=127.0.0.1 dbname=test_part1';
+-        return next 'host=127.0.0.1 dbname=test_part2';
+-        return next 'host=127.0.0.1 dbname=test_part3';
++        return query select 'host=127.0.0.1 dbname=test_part0'::text, 100::int;
++        return query select 'host=127.0.0.1 dbname=test_part1'::text, 200::int;
++        return query select 'host=127.0.0.1 dbname=test_part2'::text, 300::int;
++        return query select 'host=127.0.0.1 dbname=test_part3'::text, 400::int;
+         return;
+     end if;
+     raise exception 'no such cluster: %', cluster_name;
+@@ -23,15 +24,23 @@
+ \c test_part0
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 0; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part1
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 1; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part2
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 2; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part3
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 3; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ 
+ \c regression
+ create function test_multi(part integer, username text)
+@@ -47,6 +56,36 @@
+ returns setof integer as $$ cluster 'testcluster'; run on all; $$ language plproxy;
+ select test_multi(0, 'foo') order by 1;
+ 
++-- test RUN ON ALL parameterised
++create function test_multi_param(part integer, username text)
++returns setof integer as $$ cluster 'testcluster'; run on all; 
++select test_multi_param(part, username, conn_nr);
++$$ language plproxy;
++select test_multi_param(0, 'foo') order by 1;
++
++-- test parameter reloading
++create or replace function plproxy.get_cluster_partitions(cluster_name text, out conn_str text, out conn_nr int)
++returns setof record as $$
++begin
++    if cluster_name = 'testcluster' then
++        return query select 'host=127.0.0.1 dbname=test_part0'::text, 500::int;
++        return query select 'host=127.0.0.1 dbname=test_part1'::text, 600::int;
++        return query select 'host=127.0.0.1 dbname=test_part2'::text, 700::int;
++        return query select 'host=127.0.0.1 dbname=test_part3'::text, 800::int;
++        return;
++    end if;
++    raise exception 'no such cluster: %', cluster_name;
++end; $$ language plpgsql;
++create or replace function plproxy.get_cluster_version(cluster_name text)
++returns integer as $$
++begin
++    if cluster_name = 'testcluster' then
++        return 7;
++    end if;
++    raise exception 'no such cluster: %', cluster_name;
++end; $$ language plpgsql;
++select test_multi_param(0, 'foo') order by 1;
++
+ -- test RUN ON 2
+ drop function test_multi(integer, text);
+ create function test_multi(part integer, username text)
+@@ -58,6 +97,6 @@
+ create function test_multi(part integer, username text)
+ returns setof integer as $$ cluster 'testcluster'; run on any; $$ language plproxy;
+ -- expect that 20 calls use all partitions
+-select distinct test_multi(0, 'foo') from generate_series(1,20) order by 1;
++select distinct test_multi(0, 'foo') from generate_series(1,100) order by 1;
+ 
+ 
+Index: sql/plproxy_clustermap.sql
+===================================================================
+--- sql/plproxy_clustermap.sql	(revision 188)
++++ sql/plproxy_clustermap.sql	(revision 244)
+@@ -14,7 +14,7 @@
+     end if;
+     raise exception 'no such cluster: %', cluster_name;
+ end; $$ language plpgsql;
+-
++drop function plproxy.get_cluster_partitions(text);
+ create or replace function plproxy.get_cluster_partitions(cluster_name text)
+ returns setof text as $$
+ begin
+Index: expected/plproxy_clustermap.out
+===================================================================
+--- expected/plproxy_clustermap.out	(revision 188)
++++ expected/plproxy_clustermap.out	(revision 244)
+@@ -14,6 +14,7 @@
+     end if;
+     raise exception 'no such cluster: %', cluster_name;
+ end; $$ language plpgsql;
++drop function plproxy.get_cluster_partitions(text);
+ create or replace function plproxy.get_cluster_partitions(cluster_name text)
+ returns setof text as $$
+ begin
+Index: expected/plproxy_many.out
+===================================================================
+--- expected/plproxy_many.out	(revision 188)
++++ expected/plproxy_many.out	(revision 244)
+@@ -6,14 +6,15 @@
+     end if;
+     raise exception 'no such cluster: %', cluster_name;
+ end; $$ language plpgsql;
+-create or replace function plproxy.get_cluster_partitions(cluster_name text)
+-returns setof text as $$
++drop function plproxy.get_cluster_partitions(text);
++create or replace function plproxy.get_cluster_partitions(cluster_name text, out conn_str text, out conn_nr int)
++returns setof record as $$
+ begin
+     if cluster_name = 'testcluster' then
+-        return next 'host=127.0.0.1 dbname=test_part0';
+-        return next 'host=127.0.0.1 dbname=test_part1';
+-        return next 'host=127.0.0.1 dbname=test_part2';
+-        return next 'host=127.0.0.1 dbname=test_part3';
++        return query select 'host=127.0.0.1 dbname=test_part0'::text, 100::int;
++        return query select 'host=127.0.0.1 dbname=test_part1'::text, 200::int;
++        return query select 'host=127.0.0.1 dbname=test_part2'::text, 300::int;
++        return query select 'host=127.0.0.1 dbname=test_part3'::text, 400::int;
+         return;
+     end if;
+     raise exception 'no such cluster: %', cluster_name;
+@@ -21,15 +22,23 @@
+ \c test_part0
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 0; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part1
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 1; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part2
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 2; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c test_part3
+ create function test_multi(part integer, username text)
+ returns integer as $$ begin return 3; end; $$ language plpgsql;
++create function test_multi_param(part integer, username text, conn_nr int)
++returns integer as $$ begin return conn_nr; end; $$ language plpgsql;
+ \c regression
+ create function test_multi(part integer, username text)
+ returns integer as $$ cluster 'testcluster'; run on int4(part); $$ language plproxy;
+@@ -70,6 +79,50 @@
+           3
+ (4 rows)
+ 
++-- test RUN ON ALL parameterised
++create function test_multi_param(part integer, username text)
++returns setof integer as $$ cluster 'testcluster'; run on all; 
++select test_multi_param(part, username, conn_nr);
++$$ language plproxy;
++select test_multi_param(0, 'foo') order by 1;
++ test_multi_param 
++------------------
++              100
++              200
++              300
++              400
++(4 rows)
++
++-- test parameter reloading
++create or replace function plproxy.get_cluster_partitions(cluster_name text, out conn_str text, out conn_nr int)
++returns setof record as $$
++begin
++    if cluster_name = 'testcluster' then
++        return query select 'host=127.0.0.1 dbname=test_part0'::text, 500::int;
++        return query select 'host=127.0.0.1 dbname=test_part1'::text, 600::int;
++        return query select 'host=127.0.0.1 dbname=test_part2'::text, 700::int;
++        return query select 'host=127.0.0.1 dbname=test_part3'::text, 800::int;
++        return;
++    end if;
++    raise exception 'no such cluster: %', cluster_name;
++end; $$ language plpgsql;
++create or replace function plproxy.get_cluster_version(cluster_name text)
++returns integer as $$
++begin
++    if cluster_name = 'testcluster' then
++        return 7;
++    end if;
++    raise exception 'no such cluster: %', cluster_name;
++end; $$ language plpgsql;
++select test_multi_param(0, 'foo') order by 1;
++ test_multi_param 
++------------------
++              500
++              600
++              700
++              800
++(4 rows)
++
+ -- test RUN ON 2
+ drop function test_multi(integer, text);
+ create function test_multi(part integer, username text)
+@@ -85,7 +138,7 @@
+ create function test_multi(part integer, username text)
+ returns setof integer as $$ cluster 'testcluster'; run on any; $$ language plproxy;
+ -- expect that 20 calls use all partitions
+-select distinct test_multi(0, 'foo') from generate_series(1,20) order by 1;
++select distinct test_multi(0, 'foo') from generate_series(1,100) order by 1;
+  test_multi 
+ ------------
+           0
+Index: doc/config.txt
+===================================================================
+--- doc/config.txt	(revision 188)
++++ doc/config.txt	(revision 244)
+@@ -46,6 +46,11 @@
+   plproxy.get_cluster_partitions(cluster_name text)
+   returns setof text
+ 
++or
++
++  plproxy.get_cluster_partitions(cluster_name text)
++  returns setof record
++
+ This is called when a new partition configuration needs to be loaded. 
+ It should return connect strings to the partitions in the cluster.
+ The connstrings should be returned in the correct order.  The total
+@@ -93,6 +98,43 @@
+   END;
+   $$ LANGUAGE plpgsql;
+ 
++=== Connection-specific parameters ===
++
++If get_cluster_partition returns a record, then the first column must be of type
++TEXT, and must contain the connection string. All the other columns may be used
++to introduce connection-specific parameters at call-time in PL/Proxy.
++
++For example, if we modify the above function to return an extra column, as
++follows:
++
++  create or replace function plproxy.get_cluster_partitions(cluster_name text, 
++    out conn_str text, out conn_nr int)
++  returns setof record as $$
++    begin
++    if cluster_name = 'testcluster' then
++      return query select 'host=127.0.0.1 dbname=test_part0'::text, 100::int;
++      return query select 'host=127.0.0.1 dbname=test_part1'::text, 200::int;
++      return query select 'host=127.0.0.1 dbname=test_part2'::text, 300::int;
++      return query select 'host=127.0.0.1 dbname=test_part3'::text, 400::int;
++      return;
++    end if;
++    raise exception 'no such cluster: %', cluster_name;
++  end; $$ language plpgsql;
++
++Note that we return an extra argument with each connection string. We can then
++create the following function:
++
++  create function test_multi_param(part integer, username text) 
++    returns setof integer as $$ 
++      cluster 'testcluster';
++      run on all; 
++      SELECT test_multi_param(part, username, conn_nr);
++  $$ language plproxy;
++
++In the this function, the SELECT uses a parameter conn_nr that does not appear
++in the method signature. For each connection on which this function call is run,
++the value from the result of get_cluster_partitions will be substituted.
++
+ == plproxy.get_cluster_config(cluster) ==
+ 
+   plproxy.get_cluster_config(in cluster_name text,
+Index: src/cluster.c
+===================================================================
+--- src/cluster.c	(revision 188)
++++ src/cluster.c	(revision 244)
+@@ -134,7 +134,7 @@
+ static void
+ free_connlist(ProxyCluster *cluster)
+ {
+-	int			i;
++	int			i, j;
+ 	ProxyConnection *conn;
+ 
+ 	for (i = 0; i < cluster->conn_count; i++)
+@@ -146,7 +146,35 @@
+ 			PQclear(conn->res);
+ 		if (conn->connstr)
+ 			pfree((void *) conn->connstr);
++		if (cluster->param_count > 0) {
++
++			for(j = 0; j < cluster->param_count; j++) {
++				if(conn->param_values[j]) {
++					pfree(conn->param_values[j]);
++				}
++			}
++
++			pfree(conn->param_values);
++
++			conn->param_values = NULL;
++		}
+ 	}
++
++	if (cluster->param_count > 0) {
++	
++		for (i = 0; i < cluster->param_count; i++) {
++			plproxy_free_type(cluster->param_send_types[i]);
++			pfree(cluster->param_names[i]);
++		}
++		
++		pfree(cluster->param_send_types);
++		pfree(cluster->param_names);
++	
++		cluster->param_names = NULL;
++		cluster->param_send_types = NULL;
++		cluster->param_count = 0;
++	}
++	
+ 	pfree(cluster->part_map);
+ 	pfree(cluster->conn_list);
+ 
+@@ -161,35 +189,78 @@
+  * Add new database connection if it does not exists.
+  */
+ static ProxyConnection *
+-add_connection(ProxyCluster *cluster, char *connstr)
++add_connection(ProxyCluster *cluster, ProxyFunction *func, TupleDesc desc, HeapTuple row)
+ {
+ 	int			i;
+ 	ProxyConnection *conn;
+ 	char	   *username;
+ 	StringInfo	final;
++	char	   *col_val;
++	MemoryContext old_ctx;
+ 
++	col_val = SPI_getvalue(row, desc, 1);
++
++	if (col_val == NULL)
++		plproxy_error(func, "connstr must not be NULL");
++
+ 	final = makeStringInfo();
+-	appendStringInfoString(final, connstr);
++	appendStringInfoString(final, col_val);
+ 
+ 	/* append current user if not specified in connstr */
+-	if (strstr(connstr, "user=") == NULL)
++	if (strstr(col_val, "user=") == NULL)
+ 	{
+ 		username = GetUserNameFromId(GetSessionUserId());
+ 		appendStringInfo(final, " user=%s", username);
+ 	}
+ 
+ 	/* check if already have it */
++	/*
++
++	20090528 Ian Sollars <ian dot sollars at gmail dot com>
++
++	This method is only ever called from reload_parts, where
++	all the connections are freed using free_connlist before
++	this method is called. So, this code will never return a
++	connection... left commented because I could be wrong.
++
+ 	for (i = 0; i < cluster->conn_count; i++)
+ 	{
+ 		conn = &cluster->conn_list[i];
+ 		if (strcmp(conn->connstr, final->data) == 0)
+ 			return conn;
+ 	}
++	*/
+ 
+ 	/* add new connection */
+ 	conn = &cluster->conn_list[cluster->conn_count++];
+ 	conn->connstr = MemoryContextStrdup(cluster_mem, final->data);
++	
++	if(cluster->param_count > 0) {
++	
++		old_ctx = MemoryContextSwitchTo(cluster_mem);
+ 
++		/* allocate parameters */
++
++		conn->param_values = palloc0(cluster->param_count * sizeof(char*));
++
++		for(i = 0; i < cluster->param_count; i++) {
++		
++			col_val = SPI_getvalue(row, desc, i+2);
++		
++			if(col_val == NULL) {
++				conn->param_values[i] = NULL;
++				continue;
++			}
++
++			/*which context is SPI_getvalue result in?*/
++			conn->param_values[i] = MemoryContextStrdup(cluster_mem, col_val);
++
++		}
++
++		MemoryContextSwitchTo(old_ctx);
++
++	}
++
+ 	return conn;
+ }
+ 
+@@ -285,10 +356,8 @@
+ 	int			err,
+ 				i;
+ 	ProxyConnection *conn;
+-	char	   *connstr;
+ 	MemoryContext old_ctx;
+ 	TupleDesc	desc;
+-	HeapTuple	row;
+ 
+ 	/* run query */
+ 	err = SPI_execute_plan(partlist_plan, &dname, NULL, false, 0);
+@@ -313,20 +382,42 @@
+ 
+ 	/* allocate lists */
+ 	old_ctx = MemoryContextSwitchTo(cluster_mem);
++	
+ 	cluster->part_map = palloc0(SPI_processed * sizeof(ProxyConnection *));
+ 	cluster->conn_list = palloc0(SPI_processed * sizeof(ProxyConnection));
++
++	cluster->param_count = desc->natts - 1;
++
++	if(cluster->param_count > 0) {
++
++		// allocate parameters
++
++		cluster->param_send_types = palloc0(cluster->param_count * sizeof(ProxyType *));
++		
++		cluster->param_names = palloc0(cluster->param_count * sizeof(char *));
++
++		for(i = 0; i < cluster->param_count; i++) {
++		
++			cluster->param_send_types[i] = plproxy_find_type_info_ctx(
++				NULL, cluster_mem, desc->attrs[i+1]->atttypid, true);
++
++			cluster->param_names[i] = MemoryContextStrdup(cluster_mem, (desc->attrs[i+1]->attname.data));
++
++		}
++		
++	} else {
++	
++		cluster->param_send_types = NULL;
++		
++		cluster->param_names = NULL;
++	}
++
+ 	MemoryContextSwitchTo(old_ctx);
+ 
+ 	/* fill values */
+ 	for (i = 0; i < SPI_processed; i++)
+ 	{
+-		row = SPI_tuptable->vals[i];
+-
+-		connstr = SPI_getvalue(row, desc, 1);
+-		if (connstr == NULL)
+-			plproxy_error(func, "connstr must not be NULL");
+-
+-		conn = add_connection(cluster, connstr);
++		conn = add_connection(cluster, func, desc, SPI_tuptable->vals[i]);
+ 		cluster->part_map[i] = conn;
+ 	}
+ 
+Index: src/type.c
+===================================================================
+--- src/type.c	(revision 188)
++++ src/type.c	(revision 244)
+@@ -193,9 +193,11 @@
+ 	return tuple;
+ }
+ 
+-/* Find info about scalar type */
++/* Find info about scalar type - using passed memory context
++ (since ProxyType might exist either at cluster info level or
++ at function info level. */
+ ProxyType *
+-plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
++plproxy_find_type_info_ctx(ProxyFunction *func, MemoryContext ctx, Oid oid, bool for_send)
+ {
+ 	ProxyType  *type;
+ 	HeapTuple	t_type,
+@@ -245,31 +247,31 @@
+ 	}
+ 
+ 	/* allocate & fill structure */
+-	type = plproxy_func_alloc(func, sizeof(*type));
++	type = MemoryContextAlloc(ctx, sizeof(*type));
+ 	memset(type, 0, sizeof(*type));
+ 
+ 	type->type_oid = oid;
+ 	type->io_param = getTypeIOParam(t_type);
+ 	type->for_send = for_send;
+ 	type->by_value = s_type->typbyval;
+-	type->name = plproxy_func_strdup(func, namebuf);
++	type->name = MemoryContextStrdup(ctx, namebuf);
+ 
+ 	/* decide what function is needed */
+ 	if (for_send)
+ 	{
+-		fmgr_info_cxt(s_type->typoutput, &type->io.out.output_func, func->ctx);
++		fmgr_info_cxt(s_type->typoutput, &type->io.out.output_func, ctx);
+ 		if (OidIsValid(s_type->typsend) && usable_binary(oid))
+ 		{
+-			fmgr_info_cxt(s_type->typsend, &type->io.out.send_func, func->ctx);
++			fmgr_info_cxt(s_type->typsend, &type->io.out.send_func, ctx);
+ 			type->has_send = 1;
+ 		}
+ 	}
+ 	else
+ 	{
+-		fmgr_info_cxt(s_type->typinput, &type->io.in.input_func, func->ctx);
++		fmgr_info_cxt(s_type->typinput, &type->io.in.input_func, ctx);
+ 		if (OidIsValid(s_type->typreceive) && usable_binary(oid))
+ 		{
+-			fmgr_info_cxt(s_type->typreceive, &type->io.in.recv_func, func->ctx);
++			fmgr_info_cxt(s_type->typreceive, &type->io.in.recv_func, ctx);
+ 			type->has_recv = 1;
+ 		}
+ 	}
+@@ -279,7 +281,14 @@
+ 	return type;
+ }
+ 
++/* Find info about scalar type */
++ProxyType *
++plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
++{
++	return plproxy_find_type_info_ctx(func, func->ctx, oid, for_send);
++}
+ 
++
+ /* Convert a Datum to parameter for libpq */
+ char *
+ plproxy_send_type(ProxyType *type, Datum val, bool allow_bin, int *len, int *fmt)
+Index: src/execute.c
+===================================================================
+--- src/execute.c	(revision 188)
++++ src/execute.c	(revision 244)
+@@ -159,7 +159,7 @@
+ send_query(ProxyFunction *func, ProxyConnection *conn,
+ 		   const char **values, int *plengths, int *pformats)
+ {
+-	int			res;
++	int			res, idx, arg_nr;
+ 	struct timeval now;
+ 	ProxyQuery *q = func->remote_sql;
+ 	ProxyConfig *cf = &func->cur_cluster->config;
+@@ -188,6 +188,37 @@
+ 		}
+ 	}
+ 
++	//then set the negative-index parameters
++	if(func->cluster_param_init) {
++
++		for (arg_nr = 0; arg_nr < q->arg_count; arg_nr++)
++		{
++
++			idx = q->arg_lookup[arg_nr];
++	
++			if (idx >= 0)
++			{
++				continue;
++			}
++			
++			// convert to positive index, remove offset 
++			idx = idx - (idx * 2) - 1;
++			
++			if( ! conn->param_values[idx]) {
++				values[arg_nr] = NULL;
++				continue;
++			}
++
++			/*
++			NOTE that this only works if binary is NOT used, which is the case
++			for everything right now.
++			*/
++			values[arg_nr] = conn->param_values[idx];			
++
++		}
++		
++	}
++
+ 	/* send query */
+ 	conn->state = C_QUERY_WRITE;
+ 	res = PQsendQueryParams(conn->db, q->sql, q->arg_count,
+@@ -741,6 +772,9 @@
+ 	int			pformats[FUNC_MAX_ARGS];
+ 	int			i;
+ 	int			gotbin;
++	int			idx;
++	bool		bin;
++	
+ 	ProxyCluster *cluster = func->cur_cluster;
+ 
+ 	/* clean old results */
+@@ -770,30 +804,54 @@
+ 			plproxy_error(func, "uninitialized run_type");
+ 	}
+ 
++	/* then re-parse the remote SQL with the cluster column headings
++	   taken into account
++	 */
++	if(cluster->param_count > 0 && ! func->cluster_param_init) {
++		plproxy_run_parser_select(func, cluster);
++		func->cluster_param_init = true;
++	}
++
++	/*why was this in the loop?*/
++	bin = cluster->config.disable_binary ? 0 : 1;
++
+ 	/* prepare args */
+ 	gotbin = 0;
++	
+ 	for (i = 0; i < func->remote_sql->arg_count; i++)
+ 	{
+ 		plengths[i] = 0;
+ 		pformats[i] = 0;
+-		if (PG_ARGISNULL(i))
++		
++		/*PROBLEM, this argnull should be usig arg_lookup, but is it initialised
++		  if the argument is null?*/
++
++		idx = func->remote_sql->arg_lookup[i];
++		
++		if(idx < 0) {
++			/* although we don't do sent_type on cluster-level parameters here,
++			  we need to know if they're sent using binary or not here, so
++			  we duplicate a bit of logic from send_type here... */
++			if(bin && cluster->param_send_types[idx + (idx * 2) + 1]->has_send) {
++				gotbin = 1;
++			}
++		}
++		
++		if (PG_ARGISNULL(i) || idx < 0)
+ 		{
++		
+ 			values[i] = NULL;
++			continue;
+ 		}
+-		else
+-		{
+-			int			idx = func->remote_sql->arg_lookup[i];
+-			bool		bin = cluster->config.disable_binary ? 0 : 1;
+ 
+-			values[i] = plproxy_send_type(func->arg_types[idx],
+-										  PG_GETARG_DATUM(idx),
+-										  bin,
+-										  &plengths[i],
+-										  &pformats[i]);
++		values[i] = plproxy_send_type(func->arg_types[idx],
++									  fcinfo->arg[idx]/*datum*/,
++									  bin,
++									  &plengths[i],
++									  &pformats[i]);
+ 
+-			if (pformats[i])
+-				gotbin = 1;
+-		}
++		if (pformats[i])
++			gotbin = 1;
+ 	}
+ 
+ 	/*
+Index: src/parser.y
+===================================================================
+--- src/parser.y	(revision 188)
++++ src/parser.y	(revision 244)
+@@ -34,6 +34,9 @@
+ /* during parsing, keep reference to function here */
+ static ProxyFunction *xfunc;
+ 
++/* during parsing for a select, keep reference to cluster here */
++static ProxyCluster *xcluster;
++
+ /* remember what happened */
+ static int got_run, got_cluster, got_connect;
+ 
+@@ -147,7 +150,7 @@
+ 
+ sql_start: SELECT		{ if (select_sql)
+ 							yyerror("Only one SELECT statement allowed");
+-						  select_sql = plproxy_query_start(xfunc, true);
++						  select_sql = plproxy_query_start_cluster(xfunc, xcluster, true);
+ 						  cur_sql = select_sql;
+ 						  plproxy_query_add_const(cur_sql, $1); }
+ 		 ;
+@@ -181,7 +184,7 @@
+ }
+ 
+ 
+-/* actually run the flex/bison parser */
++/* run the flex/bison parser for the whole function  */
+ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
+ {
+ 	/* reset variables, in case there was error exit */
+@@ -189,6 +192,7 @@
+ 
+ 	/* make current function visible to parser */
+ 	xfunc = func;
++	xcluster = NULL;
+ 
+ 	/* By default expect RUN ON ANY; */
+ 	xfunc->run_type = R_ANY;
+@@ -231,3 +235,47 @@
+ 	reset_parser_vars();
+ }
+ 
++/* run the parser for a SELECT only */
++void plproxy_run_parser_select(ProxyFunction *func, ProxyCluster *cluster)
++{
++	char *body;
++
++	StringInfo tmp = makeStringInfo();
++	appendStringInfo(tmp, func->remote_sql->sql);
++	appendStringInfo(tmp, ";");
++	
++	body = MemoryContextStrdup(func->ctx, tmp->data);
++	
++	pfree(tmp);
++		
++	reset_parser_vars();
++
++	/* make tmp function & cluster visible to parser */
++	xfunc = func;
++	xcluster = cluster;
++	
++	/* reinitialize scanner */
++	plproxy_yylex_startup();
++
++	/* setup scanner */
++	plproxy_yy_scan_bytes(body, strlen(body));
++
++	/* run parser */
++	yyparse();
++
++	/* release scanner resources */
++	plproxy_yylex_destroy();
++
++	if (!select_sql)
++		yyerror("SELECT statement missing for cluster-parameterised query");
++
++	pfree(func->remote_sql);
++
++	func->remote_sql = plproxy_query_finish(select_sql);
++	
++	pfree(body);
++	
++	reset_parser_vars();
++}
++
++
+Index: src/plproxy.h
+===================================================================
+--- src/plproxy.h	(revision 188)
++++ src/plproxy.h	(revision 244)
+@@ -111,6 +111,9 @@
+ {
+ 	const char *connstr;		/* Connection string for libpq */
+ 
++	/* connection string parameters */
++	char	  **param_values;		/* Parameter names */
++
+ 	/* state */
+ 	PGconn	   *db;				/* libpq connection handle */
+ 	PGresult   *res;			/* last resultset */
+@@ -123,27 +126,6 @@
+ 	bool		tuning;			/* True if tuning query is running on conn */
+ } ProxyConnection;
+ 
+-/* Info about one cluster */
+-typedef struct ProxyCluster
+-{
+-	struct ProxyCluster *next;	/* Pointer for building singly-linked list */
+-
+-	const char *name;			/* Cluster name */
+-	int			version;		/* Cluster version */
+-	ProxyConfig config;			/* Cluster config */
+-
+-	int			part_count;		/* Number of partitions - power of 2 */
+-	int			part_mask;		/* Mask to use to get part number from hash */
+-	ProxyConnection **part_map; /* Pointers to conn_list */
+-
+-	int			conn_count;		/* Number of actual database connections */
+-	ProxyConnection *conn_list; /* List of actual database connections */
+-
+-	int			ret_cur_conn;	/* Result walking: index of current conn */
+-	int			ret_cur_pos;	/* Result walking: index of current row */
+-	int			ret_total;		/* Result walking: total rows left */
+-} ProxyCluster;
+-
+ /*
+  * Type info cache.
+  *
+@@ -178,6 +160,33 @@
+ 	}			io;
+ } ProxyType;
+ 
++/* Info about one cluster */
++typedef struct ProxyCluster
++{
++	struct ProxyCluster *next;	/* Pointer for building singly-linked list */
++
++	/* connection string parameters */
++
++	ProxyType **param_send_types;		/* Info about parameters */
++	char	  **param_names;		/* Parameter names */
++	short		param_count;		/* Parameter count of connection string */
++
++	const char *name;			/* Cluster name */
++	int			version;		/* Cluster version */
++	ProxyConfig config;			/* Cluster config */
++
++	int			part_count;		/* Number of partitions - power of 2 */
++	int			part_mask;		/* Mask to use to get part number from hash */
++	ProxyConnection **part_map; /* Pointers to conn_list */
++
++	int			conn_count;		/* Number of actual database connections */
++	ProxyConnection *conn_list; /* List of actual database connections */
++
++	int			ret_cur_conn;	/* Result walking: index of current conn */
++	int			ret_cur_pos;	/* Result walking: index of current row */
++	int			ret_total;		/* Result walking: total rows left */
++} ProxyCluster;
++
+ /*
+  * Info cache for composite return type.
+  *
+@@ -246,6 +255,7 @@
+ 	 */
+ 
+ 	ProxyQuery *remote_sql;		/* query to be run repotely */
++	bool		cluster_param_init; /*have the lookups for the cluster been set*/
+ 
+ 	/*
+ 	 * current execution data
+@@ -264,6 +274,23 @@
+ 	int		   *result_map;
+ } ProxyFunction;
+ 
++
++/*
++ * Temporary info structure for generation.
++ *
++ * Later it will be used to make ProxyQuery.
++ */
++struct QueryBuffer
++{
++	ProxyFunction *func;
++	ProxyCluster *cluster;
++	StringInfo	sql;
++	int			arg_count;
++	int		   *arg_lookup;
++	bool		add_types;
++};
++
++
+ /* main.c */
+ Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
+ void		plproxy_error(ProxyFunction *func, const char *fmt,...);
+@@ -287,11 +314,13 @@
+ 
+ /* parser.y */
+ void		plproxy_run_parser(ProxyFunction *func, const char *body, int len);
++void		plproxy_run_parser_select(ProxyFunction *func, ProxyCluster *cluster);
+ void		plproxy_yyerror(const char *fmt,...);
+ 
+ /* type.c */
+ ProxyComposite *plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc);
+ ProxyType  *plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send);
++ProxyType  *plproxy_find_type_info_ctx(ProxyFunction *func, MemoryContext ctx, Oid oid, bool for_send);
+ char	   *plproxy_send_type(ProxyType *type, Datum val, bool allow_bin, int *len, int *fmt);
+ Datum		plproxy_recv_type(ProxyType *type, char *str, int len, bool bin);
+ HeapTuple	plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *fmts);
+@@ -308,6 +337,7 @@
+ 
+ /* query.c */
+ QueryBuffer *plproxy_query_start(ProxyFunction *func, bool add_types);
++QueryBuffer *plproxy_query_start_cluster(ProxyFunction *func, ProxyCluster *cluster, bool add_types);
+ bool		plproxy_query_add_const(QueryBuffer *q, const char *data);
+ bool		plproxy_query_add_ident(QueryBuffer *q, const char *ident);
+ ProxyQuery *plproxy_query_finish(QueryBuffer *q);
+Index: src/function.c
+===================================================================
+--- src/function.c	(revision 188)
++++ src/function.c	(revision 244)
+@@ -169,6 +169,7 @@
+ 	f->ctx = f_ctx;
+ 	f->oid = fcinfo->flinfo->fn_oid;
+ 	plproxy_set_stamp(&f->stamp, proc_tuple);
++	f->cluster_param_init = false;
+ 
+ 	if (fn_returns_dynamic_record(proc_tuple))
+ 		f->dynamic_record = 1;
+Index: src/query.c
+===================================================================
+--- src/query.c	(revision 188)
++++ src/query.c	(revision 244)
+@@ -24,32 +24,37 @@
+ #include "plproxy.h"
+ 
+ /*
+- * Temporary info structure for generation.
+- *
+- * Later it will be used to make ProxyQuery.
+- */
+-struct QueryBuffer
+-{
+-	ProxyFunction *func;
+-	StringInfo	sql;
+-	int			arg_count;
+-	int		   *arg_lookup;
+-	bool		add_types;
+-};
+-
+-/*
+  * Prepare temporary structure for query generation.
+  */
+ QueryBuffer *
+-plproxy_query_start(ProxyFunction *func, bool add_types)
++plproxy_query_start(ProxyFunction *func, bool add_types) {
++	return plproxy_query_start_cluster(func, NULL, add_types);
++
++}
++
++QueryBuffer *
++plproxy_query_start_cluster(ProxyFunction *func, ProxyCluster *cluster, bool add_types)
+ {
+ 	QueryBuffer *q = palloc(sizeof(*q));
+ 
++	if(cluster) {
++		q->cluster = cluster;
++		q->arg_lookup = palloc(sizeof(int) * (func->arg_count + cluster->param_count));
++		
++		/*remote_sql is already completed, buffer must be initialised with values*/
++		q->arg_count = func->remote_sql->arg_count;
++		memcpy(q->arg_lookup, func->remote_sql->arg_lookup, func->remote_sql->arg_count * sizeof(int));
++		
++	} else {
++		q->cluster = NULL;
++		q->arg_lookup = palloc(sizeof(int) * func->arg_count);
++	}
++
+ 	q->func = func;
+ 	q->sql = makeStringInfo();
+ 	q->arg_count = 0;
+ 	q->add_types = add_types;
+-	q->arg_lookup = palloc(sizeof(int) * func->arg_count);
++
+ 	return q;
+ }
+ 
+@@ -67,13 +72,12 @@
+  * Helper for adding a parameter reference to the query
+  */
+ static void
+-add_ref(StringInfo buf, int sql_idx, ProxyFunction *func, int fn_idx, bool add_type)
++add_ref(StringInfo buf, int sql_idx, char *type_name, bool add_type)
+ {
+ 	char		tmp[32];
+ 
+ 	if (add_type)
+-		sprintf(tmp, "$%d::%s", sql_idx + 1,
+-				func->arg_types[fn_idx]->name);
++		sprintf(tmp, "$%d::%s", sql_idx + 1, type_name);
+ 	else
+ 		sprintf(tmp, "$%d", sql_idx + 1);
+ 	appendStringInfoString(buf, tmp);
+@@ -87,47 +91,111 @@
+ plproxy_query_add_ident(QueryBuffer *q, const char *ident)
+ {
+ 	int			i,
+-				fn_idx = -1,
+-				sql_idx = -1;
++				sql_idx = -1,
++				arg_idx = -1,
++				lookup_idx = -1;
++				
++	bool add_types = q->add_types;
++	
++	/*
++	we use the sign of the lookup idx to tell
++	where it is pointing at: if at the function,
++	it's positive, and if at the cluster parameters,
++	then it's negative.
++	*/
++	int sign;
+ 
+-	if (ident[0] == '$')
++	char** arg_names;
++	short arg_count;
++	ProxyType **arg_types;
++				
++	if (ident[0] == '$' )
+ 	{
+-		fn_idx = atoi(ident + 1) - 1;
+-		if (fn_idx < 0 || fn_idx >= q->func->arg_count)
++		arg_idx = atoi(ident + 1) - 1;
++		if (arg_idx < 0 || arg_idx >= q->func->arg_count)
+ 			return false;
+ 	}
+-	else if (q->func->arg_names)
++	
++	if(q->cluster) {
++		/*
++		types already added by previous parse, no matter the $ or not,
++		makes no difference, can just lead to more and more casts
++		being added
++		*/
++		add_types = false;
++	}
++	
++	/* then we're parsing against cluster parameters, not function parameters.
++	   $'s are always function parameters */
++	if(q->cluster && arg_idx == -1 ) {
++	
++		sign = -1;
++		arg_count = q->cluster->param_count;
++		arg_names = q->cluster->param_names;
++		arg_types = q->cluster->param_send_types;
++		
++	} else {
++	
++		sign = 1;
++		arg_count = q->func->arg_count;
++		arg_names = q->func->arg_names;
++		arg_types = q->func->arg_types;
++
++	}
++
++	if (arg_names)
+ 	{
+-		for (i = 0; i < q->func->arg_count; i++)
++
++		for (i = 0; i < arg_count; i++)
+ 		{
+-			if (!q->func->arg_names[i])
++
++			if (!arg_names[i])
+ 				continue;
+-			if (pg_strcasecmp(ident, q->func->arg_names[i]) == 0)
++
++			if (pg_strcasecmp(ident, arg_names[i]) == 0)
+ 			{
+-				fn_idx = i;
++				arg_idx = i;
++				add_types = true; //it's a $x thing, so add a cast
+ 				break;
+ 			}
+ 		}
++
++
+ 	}
+-	if (fn_idx >= 0)
++	
++	/* TODO define indexing for non-query args */		
++	if (arg_idx >= 0)
+ 	{
++	
++		lookup_idx = sign * arg_idx;
++		
++		/*negative lookup indexes have to be offset by -1 because
++		  otherwise index +0 and -0 would be indistinguishable... */
++		if(sign == -1) {
++			lookup_idx = lookup_idx - 1;
++		}
++	
+ 		for (i = 0; i < q->arg_count; i++)
+ 		{
+-			if (q->arg_lookup[i] == fn_idx)
++			if (q->arg_lookup[i] == lookup_idx)
+ 			{
+ 				sql_idx = i;
+ 				break;
+ 			}
+ 		}
++		
+ 		if (sql_idx < 0)
+ 		{
+ 			sql_idx = q->arg_count++;
+-			q->arg_lookup[sql_idx] = fn_idx;
++			q->arg_lookup[sql_idx] = lookup_idx;
+ 		}
+-		add_ref(q->sql, sql_idx, q->func, fn_idx, q->add_types);
++		
++		add_ref(q->sql, sql_idx, arg_types[arg_idx]->name, add_types);
++
+ 	}
+-	else
++	else {
+ 		appendStringInfoString(q->sql, ident);
++	}
+ 	return true;
+ }
+ 
+@@ -212,7 +280,7 @@
+ 		if (i > 0)
+ 			appendStringInfoChar(&sql, ',');
+ 
+-		add_ref(&sql, i, func, i, add_types);
++		add_ref(&sql, i, func->arg_types[i]->name, add_types);
+ 		pq->arg_lookup[i] = i;
+ 	}
+ 	appendStringInfoChar(&sql, ')');
+

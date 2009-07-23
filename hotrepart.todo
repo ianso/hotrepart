@@ -1,23 +1,9 @@
 
-	the patch needs cleaning up and so does the code.
-
 	bugs?
 	patch
 	email
- 
-    document for two variable names:
-    current_user, session_user,
-
-    bug 1) variable name substitution
-     - query.c add_ref -> tmp[32]???
-       if data type is
-           "timestamp (6) without time zone"
-           --> 31 characters
 
     bug the second, if you have a parameter named the same as a function in a select...?
-    
-    bug the third, if you already casted the variable 1$::xxx, it gets added again on a SELECT
-     -> could this cause syntax bugs? I think so... (change add_type to true on reparsing)
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -444,4 +430,16 @@ X	it overwrites before it's sent...
 X	more tests
 X	>>>>	docs
 X	remove all the printfs
+X	the patch needs cleaning up and so does the code.
+X no doesn't make sense in variable declaration
+X    document for two variable names:
+X    current_user, session_user,
+X no, notabug
+X   bug 1) variable name substitution
+X     - query.c add_ref -> tmp[32]???
+X       if data type is
+X          "timestamp (6) without time zone"
+X           --> 31 characters
+X notabug    bug the third, if you already casted the variable 1$::xxx, it gets added again on a SELECT
+X     -> could this cause syntax bugs? I think so... (change add_type to true on reparsing)
 
