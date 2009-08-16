@@ -1,4 +1,5 @@
   * [ProjectDescription Project description]
+  * [ProjectStatus Project status]
   * [DatabaseDesignCriteria Database design]
   * [RepartitioningProcess Process overview]
   * [ImplementationDetails Implementation details]
