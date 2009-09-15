@@ -23,7 +23,7 @@ Taking the UUID of this table as our partition key has several advantages: first
 
 Although demonstrated with a single table, it follows that a complete schema could be partitioned along the same lines, as long as the database table/view relations form a strictly hierarchical graph with this table at the root. This still allows joins, but only along the lines of the relation tree. This is a standard limitation of most partitioned databases.
 
-== Principle 2: the database are accessed only via an API ==
+== Principle 2: the database is accessed only via an API ==
 
 It has in the past been considered best practise to allow access to a database via an API defined in stored procedures. This was for the same reason that defined interfaces are good elsewhere: you can hide the implementation details, change internals and shuffle data around without having any impact on the users of the API.
 
