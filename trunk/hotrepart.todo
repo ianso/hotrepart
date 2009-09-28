@@ -1,4 +1,7 @@
 
+	set postgres user password
+	start on replication
+
 	bugs?
 	patch
 	email
