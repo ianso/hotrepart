@@ -1,12 +1,20 @@
 
+	postgres configuration for EC2/EBS
+	adding / removing slaves
+	proxying to slaves
+	CLUSTERS command
+	proxy layer integration
+	wiring pgbouncer
+	monitoring
+
+insert into private.items (iditem, description, owner, v) values ('f13d7164-e483-8eea-230b-5960de0424a9', 'desc', 1,1);
+
+	apt-get install python-dev for making skytools
+	python-psycopg2
+
 	set postgres user password
 	start on replication
 
-	bugs?
-	patch
-	email
-
-    bug the second, if you have a parameter named the same as a function in a select...?
 
 	load tester
 	 - how to increase & decrease rate / size @ need?
@@ -445,4 +453,9 @@ X          "timestamp (6) without time zone"
 X           --> 31 characters
 X notabug    bug the third, if you already casted the variable 1$::xxx, it gets added again on a SELECT
 X     -> could this cause syntax bugs? I think so... (change add_type to true on reparsing)
+X	Synchronizer --> S3Synchronizer ?
+X	bugs?
+X	patch
+X	email
+X no    bug the second, if you have a parameter named the same as a function in a select...?
 
