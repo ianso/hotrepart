@@ -20,8 +20,8 @@ public class MainTest {
     public void testMain() {
 
 //        Main.main(new String[]{"mock"});
-//        Main.main(new String[]{"verify"});
-        Main.main(new String[]{"loadtest"});
+        Main.main(new String[]{"verify"});
+//        Main.main(new String[]{"loadtest"});
     
     }
 
