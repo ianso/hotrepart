@@ -1,4 +1,11 @@
 
+X	ssh via Java w/ working
+	test basic instance creation && sshing to
+	
+	use velocity for templating ... nice
+	
+	typica pom has hard-coded aws.properties, log4j... WTF.
+
 	postgres configuration for EC2/EBS
 	adding / removing slaves
 	proxying to slaves
