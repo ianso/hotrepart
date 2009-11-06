@@ -1,6 +1,7 @@
 
 X	ssh via Java w/ working
 	test basic instance creation && sshing to
+	throw proper error message on bad commands
 	
 	use velocity for templating ... nice
 	
