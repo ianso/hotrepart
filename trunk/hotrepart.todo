@@ -1,7 +1,9 @@
 
-X	ssh via Java w/ working
+	ssh via Java w/ working
+		throw proper error message on bad commands
+		throw proper erroe message when unable to connect
 	test basic instance creation && sshing to
-	throw proper error message on bad commands
+	test volume creation, mounting
 	
 	use velocity for templating ... nice
 	
