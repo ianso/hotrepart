@@ -1,3 +1,46 @@
+on apt-get install:
+
+net.ex337.postgrec2.ssh.SshCommandException: debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+debconf: unable to initialize frontend: Readline
+debconf: (This frontend requires a controlling tty.)
+debconf: falling back to frontend: Teletype
+dpkg-preconfigure: unable to re-open stdin: 
+
+	at net.ex337.postgrec2.ssh.SSHSession.execCmd(SSHSession.java:60)
+	at net.ex337.postgrec2.test.Testcase_EC2.test_01_DescribeInstances(Testcase_EC2.java:69)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+	at java.lang.reflect.Method.invoke(Unknown Source)
+	at junit.framework.TestCase.runTest(TestCase.java:154)
+	at junit.framework.TestCase.runBare(TestCase.java:127)
+	at junit.framework.TestResult$1.protect(TestResult.java:106)
+	at junit.framework.TestResult.runProtected(TestResult.java:124)
+	at junit.framework.TestResult.run(TestResult.java:109)
+	at junit.framework.TestCase.run(TestCase.java:118)
+	at junit.framework.TestSuite.runTest(TestSuite.java:208)
+	at junit.framework.TestSuite.run(TestSuite.java:203)
+	at org.eclipse.jdt.internal.junit.runner.junit3.JUnit3TestReference.run(JUnit3TestReference.java:130)
+	at org.eclipse.jdt.internal.junit.runner.TestExecution.run(TestExecution.java:38)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:467)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:683)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run(RemoteTestRunner.java:390)
+	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main(RemoteTestRunner.java:197)
+
+
+
+create
+yes | mkfs -t ext3 /dev/sdf && mkdir /mnt/postgrec2 && mount /dev/sdf /mnt/postgrec2
+umount /mnt/data-store/
+
+
+ami-dcf615b5 Debian 5 lenny stable
+
+	use new EBS-based snapshots
+
+	script for installing
 
 	ssh via Java w/ working
 		throw proper error message on bad commands
@@ -5,7 +48,17 @@
 	test basic instance creation && sshing to
 	test volume creation, mounting
 	
-	use velocity for templating ... nice
+	creating
+	available
+	
+X	apt-get update
+X	apt-get install python postgresql-server-8.3 make flex bison postgresql-server-dev-8.3 postgresql-contrib-8.3 postgresql-plpython-8.3 -y
+	
+	use velocity for templating ..
+		get clean versions, APIize their permissions
+//		postgresql.conf
+//		pg_hba.conf
+//		pg_ident.conf
 	
 	typica pom has hard-coded aws.properties, log4j... WTF.
 
@@ -468,4 +521,6 @@ X	bugs?
 X	patch
 X	email
 X no    bug the second, if you have a parameter named the same as a function in a select...?
-
+X	ssh via Java w/ working
+X	test basic instance creation && sshing to
+X	throw proper error message on bad commands
