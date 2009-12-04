@@ -1,3 +1,27 @@
+Description	Resource	Path	Location	Type
+Access restriction: The constructor GetPropertyAction(String) is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 35	Java Problem
+Access restriction: The type GetPropertyAction is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 9	Java Problem
+Access restriction: The type GetPropertyAction is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 35	Java Problem
+
+X	request parameters
+X		String instanceInitiatedShutdownBehavior
+X		boolean disableApiTermination
+
+	add the following to BlockDeviceMapping, runInstances	
+	BlockDeviceMappingItemType --> BlockDeviceMapping
+		NEW EbsBlockDevice
+			  <xs:complexType name="EbsBlockDeviceType">
+			    <xs:sequence>
+				  <xs:element name="snapshotId" type="xs:string" minOccurs="0"/>
+				  <xs:element name="volumeSize" type="xs:int" minOccurs="0"/>
+				  <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
+				</xs:sequence>
+			  </xs:complexType>
+
+		"no device" flag
+	
+
+
 wget http://s3.amazonaws.com/ec2-downloads/2009-08-15.ec2.wsdl
 wget http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
 
