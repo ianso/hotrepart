@@ -1,3 +1,27 @@
+
+CXF
+
+Missing argument: wsdlurl
+
+Usage : wsdl2java -fe <front-end-name> -db <data-binding-name> -wv <wsdl-version> -p <[wsdl-namespace =]package-name>* -sn <service-name> -b <binding-file-name>* -reserveClass <cla
+ss-name>* -catalog <catalog-file-name> -d <output-directory> -compile -classdir <compile-classes-directory> -impl -server -client -all -autoNameResolution -allowElementReferences<=
+true> -defaultValues<=class-name-for-DefaultValueProvider> -ant -nexclude <schema-namespace [= java-package-name]>* -exsh <(true, false)> -dns <Default value is true> -dex <(true,
+false)> -validate -keep -wsdlLocation <wsdlLocation> -xjc<xjc-arguments>* -noAddressBinding -h -v -verbose -quiet -wsdlList <wsdlurl>
+
+ - the maven plugin instructions are accurate
+ - the plugin works
+ - all the stuff is in repos
+ - worked first time
+
+
+WSDLToJava Error: org.apache.cxf.tools.common.toolspec.parser.BadUsageException: Missing argument: wsdlurl
+
+
+
+AXIS2
+wsdl2java.bat -d jaxbri -o D:/sharealike/BRANCHES/postgrec2/src/main/java -S . -R . --noBuildXML --noMessageReceiver -uri http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
+
+
 Description	Resource	Path	Location	Type
 Access restriction: The constructor GetPropertyAction(String) is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 35	Java Problem
 Access restriction: The type GetPropertyAction is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 9	Java Problem
@@ -6,7 +30,6 @@ Access restriction: The type GetPropertyAction is not accessible due to restrict
 X	request parameters
 X		String instanceInitiatedShutdownBehavior
 X		boolean disableApiTermination
-
 	add the following to BlockDeviceMapping, runInstances	
 	BlockDeviceMappingItemType --> BlockDeviceMapping
 		NEW EbsBlockDevice
