@@ -1,4 +1,33 @@
 
+openssl pkcs12 -export -name amaws -out aws2.pkcs12 -in cert.pem -inkey pk-bare.pem
+
+keytool -v -importkeystore -srckeystore aws2.pkcs12 -srcstoretype pkcs12 -srcalias amaws -srcstorepass password -deststoretype jks -deststorepass password -destkeystore keystore.jks
+
+
+keytool -import -alias aws  -file pk-bare.pem -keystore pks.jks -storepass password
+
+
+keytool -v -list -storetype jks -keystore keystore.jks
+
+Caused by: java.io.IOException: exception decrypting data - java.security.InvalidKeyException: Illegal key size
+
+Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files 6 
+
+maven should not filter key material
+
+Caused by: java.io.IOException: DER length more than 4 bytes
+
+
+Caused by: java.io.IOException: Invalid keystore format
+
+
+AWS was not able to authenticate the request: access credentials are missing
+
+Timestamp must be signed
+
+                        "{Element}{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Timestamp;"+
+
+
 CXF
 
 Missing argument: wsdlurl
