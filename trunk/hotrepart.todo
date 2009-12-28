@@ -1,84 +1,7 @@
 
-openssl pkcs12 -export -name amaws -out aws2.pkcs12 -in cert.pem -inkey pk-bare.pem
+charger
+moon
 
-keytool -v -importkeystore -srckeystore aws2.pkcs12 -srcstoretype pkcs12 -srcalias amaws -srcstorepass password -deststoretype jks -deststorepass password -destkeystore keystore.jks
-
-
-keytool -import -alias aws  -file pk-bare.pem -keystore pks.jks -storepass password
-
-
-keytool -v -list -storetype jks -keystore keystore.jks
-
-Caused by: java.io.IOException: exception decrypting data - java.security.InvalidKeyException: Illegal key size
-
-Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files 6 
-
-maven should not filter key material
-
-Caused by: java.io.IOException: DER length more than 4 bytes
-
-
-Caused by: java.io.IOException: Invalid keystore format
-
-
-AWS was not able to authenticate the request: access credentials are missing
-
-Timestamp must be signed
-
-                        "{Element}{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Timestamp;"+
-
-
-CXF
-
-Missing argument: wsdlurl
-
-Usage : wsdl2java -fe <front-end-name> -db <data-binding-name> -wv <wsdl-version> -p <[wsdl-namespace =]package-name>* -sn <service-name> -b <binding-file-name>* -reserveClass <cla
-ss-name>* -catalog <catalog-file-name> -d <output-directory> -compile -classdir <compile-classes-directory> -impl -server -client -all -autoNameResolution -allowElementReferences<=
-true> -defaultValues<=class-name-for-DefaultValueProvider> -ant -nexclude <schema-namespace [= java-package-name]>* -exsh <(true, false)> -dns <Default value is true> -dex <(true,
-false)> -validate -keep -wsdlLocation <wsdlLocation> -xjc<xjc-arguments>* -noAddressBinding -h -v -verbose -quiet -wsdlList <wsdlurl>
-
- - the maven plugin instructions are accurate
- - the plugin works
- - all the stuff is in repos
- - worked first time
-
-
-WSDLToJava Error: org.apache.cxf.tools.common.toolspec.parser.BadUsageException: Missing argument: wsdlurl
-
-
-
-AXIS2
-wsdl2java.bat -d jaxbri -o D:/sharealike/BRANCHES/postgrec2/src/main/java -S . -R . --noBuildXML --noMessageReceiver -uri http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
-
-
-Description	Resource	Path	Location	Type
-Access restriction: The constructor GetPropertyAction(String) is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 35	Java Problem
-Access restriction: The type GetPropertyAction is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 9	Java Problem
-Access restriction: The type GetPropertyAction is not accessible due to restriction on required library C:\Program Files\Java\jre6\lib\rt.jar	SignerEncoder.java	/typica-trunk/java/com/xerox/amazonws/common	line 35	Java Problem
-
-X	request parameters
-X		String instanceInitiatedShutdownBehavior
-X		boolean disableApiTermination
-	add the following to BlockDeviceMapping, runInstances	
-	BlockDeviceMappingItemType --> BlockDeviceMapping
-		NEW EbsBlockDevice
-			  <xs:complexType name="EbsBlockDeviceType">
-			    <xs:sequence>
-				  <xs:element name="snapshotId" type="xs:string" minOccurs="0"/>
-				  <xs:element name="volumeSize" type="xs:int" minOccurs="0"/>
-				  <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
-				</xs:sequence>
-			  </xs:complexType>
-
-		"no device" flag
-	
-
-
-wget http://s3.amazonaws.com/ec2-downloads/2009-08-15.ec2.wsdl
-wget http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
-
-
-	patch typica for new stuff
 
 on apt-get install:
 
@@ -606,3 +529,21 @@ X no    bug the second, if you have a parameter named the same as a function in 
 X	ssh via Java w/ working
 X	test basic instance creation && sshing to
 X	throw proper error message on bad commands
+X	request parameters
+X		String instanceInitiatedShutdownBehavior
+X		boolean disableApiTermination
+X no	add the following to BlockDeviceMapping, runInstances	
+X no	BlockDeviceMappingItemType --> BlockDeviceMapping
+X no		NEW EbsBlockDevice
+X no			  <xs:complexType name="EbsBlockDeviceType">
+X no			    <xs:sequence>
+X no				  <xs:element name="snapshotId" type="xs:string" minOccurs="0"/>
+X no				  <xs:element name="volumeSize" type="xs:int" minOccurs="0"/>
+X no				  <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
+X no				</xs:sequence>
+X no			  </xs:complexType>
+X no		"no device" flag
+X no	wget http://s3.amazonaws.com/ec2-downloads/2009-08-15.ec2.wsdl
+X no	wget http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
+X no	patch typica for new stuff
+
