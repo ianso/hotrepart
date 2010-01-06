@@ -1,7 +1,7 @@
 
-charger
-moon
+get i
 
+performance benefits of image vs. volume except faster startup time?
 
 on apt-get install:
 
@@ -546,4 +546,6 @@ X no		"no device" flag
 X no	wget http://s3.amazonaws.com/ec2-downloads/2009-08-15.ec2.wsdl
 X no	wget http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
 X no	patch typica for new stuff
+X	charger
+X	moon
 
