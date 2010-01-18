@@ -1,7 +1,9 @@
 
-get i
-
-performance benefits of image vs. volume except faster startup time?
+	create interfaces
+	create config files
+	 - wire services
+	 - copy management, benchmarking, ? from sharealike
+	write base test case
 
 on apt-get install:
 
@@ -43,21 +45,9 @@ umount /mnt/data-store/
 
 ami-dcf615b5 Debian 5 lenny stable
 
-	use new EBS-based snapshots, update typica if necessary
+X no	use new EBS-based snapshots, update typica if necessary
+test	script for installing
 
-	script for installing
-
-	ssh via Java w/ working
-		throw proper error message on bad commands
-		throw proper erroe message when unable to connect
-	test basic instance creation && sshing to
-	test volume creation, mounting
-	
-	creating
-	available
-	
-X	apt-get update
-X	apt-get install python postgresql-server-8.3 make flex bison postgresql-server-dev-8.3 postgresql-contrib-8.3 postgresql-plpython-8.3 -y
 	
 	use velocity for templating ..
 		get clean versions, APIize their permissions
@@ -65,7 +55,6 @@ X	apt-get install python postgresql-server-8.3 make flex bison postgresql-server
 //		pg_hba.conf
 //		pg_ident.conf
 	
-	typica pom has hard-coded aws.properties, log4j... WTF.
 
 	postgres configuration for EC2/EBS
 	adding / removing slaves
@@ -548,4 +537,16 @@ X no	wget http://s3.amazonaws.com/ec2-downloads/2009-10-31.ec2.wsdl
 X no	patch typica for new stuff
 X	charger
 X	moon
+X no	typica pom has hard-coded aws.properties, log4j... WTF.
+X	performance benefits of image vs. volume except faster startup time?
+X no	get i
+X	ssh via Java w/ working
+X		throw proper error message on bad commands
+X		throw proper erroe message when unable to connect
+x	test basic instance creation && sshing to
+X	test volume creation, mounting
+X	creating
+X	available
+X	apt-get update
+X	apt-get install python postgresql-server-8.3 make flex bison postgresql-server-dev-8.3 postgresql-contrib-8.3 postgresql-plpython-8.3 -y
 
