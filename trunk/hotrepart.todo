@@ -1,4 +1,16 @@
 
+	clean up exceptions & create proper system
+	schedule stuff with spring, not with your my own executors
+	think through the workers and get them working properly
+	another queue for updating template status details?
+
+	http://queue.amazonaws.com/doc/2009-02-01/QueueService.wsdl
+
+	write SDB facade
+test	write SQS facade
+
+	configure whether or not to stop things on error in a queue worker
+
 	create interfaces
 	create config files
 	 - wire services
@@ -47,14 +59,12 @@ ami-dcf615b5 Debian 5 lenny stable
 
 X no	use new EBS-based snapshots, update typica if necessary
 test	script for installing
-
 	
 	use velocity for templating ..
 		get clean versions, APIize their permissions
 //		postgresql.conf
 //		pg_hba.conf
 //		pg_ident.conf
-	
 
 	postgres configuration for EC2/EBS
 	adding / removing slaves
