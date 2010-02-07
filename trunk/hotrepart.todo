@@ -1,21 +1,20 @@
 
-	clean up exceptions & create proper system
-	schedule stuff with spring, not with your my own executors
-	think through the workers and get them working properly
-	another queue for updating template status details?
+	scheduler not firing 
 
-	http://queue.amazonaws.com/doc/2009-02-01/QueueService.wsdl
+test	clean up exceptions & create proper system
+	create proper exception class hierarchy
+test	create handler to dump request, so I can relaunch
+test	create test harness
+test	schedule stuff with spring, not with my own executors
+test	think through the workers and get them working properly
+test	 - add finaliser
+
+	check - can we attach volume after available but before console output present?
+
 
 	write SDB facade
-test	write SQS facade
 
-	configure whether or not to stop things on error in a queue worker
-
-	create interfaces
-	create config files
-	 - wire services
-	 - copy management, benchmarking, ? from sharealike
-	write base test case
+	copy config  management, benchmarking, ? from sharealike
 
 on apt-get install:
 
@@ -559,4 +558,22 @@ X	creating
 X	available
 X	apt-get update
 X	apt-get install python postgresql-server-8.3 make flex bison postgresql-server-dev-8.3 postgresql-contrib-8.3 postgresql-plpython-8.3 -y
+X	create interfaces
+X	create config files
+X	 - wire services
+X	write base test case
+X	mvn exec:java -Dexec.mainClass=net.ex337.postgrec2.Postgrec2CmdLine 
+X	convert cmdline to app
+X	tests
+X	Why is JAXBuddy not working?
+X	lookup	JAXWS jaxB + jaxb:extensionBindingPrefixes="xjc" bindings
+X test	add logging statements
+X	create error queuess 
+X	fix queue system - should have one queue per listener.
+X	mock system doesn't repost errors
+X no	read javadocs on Future
+X no	another queue for updating template status details?
+X	http://queue.amazonaws.com/doc/2009-02-01/QueueService.wsdl
+X test	write SQS facade
+X no	configure whether or not to stop things on error in a queue worker
 
