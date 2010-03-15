@@ -1,20 +1,17 @@
+X	replace updateTemplate and addNewTemplate with putTemplate
+	get SDB-backed DAO working properly for templates
+X		 - getT
+X	 - deleteT
+test	 - getTemplateList
 
-	scheduler not firing 
-
-test	clean up exceptions & create proper system
-	create proper exception class hierarchy
-test	create handler to dump request, so I can relaunch
-test	create test harness
-test	schedule stuff with spring, not with my own executors
 test	think through the workers and get them working properly
 test	 - add finaliser
 
 	check - can we attach volume after available but before console output present?
 
-
-	write SDB facade
-
 	copy config  management, benchmarking, ? from sharealike
+
+	look at how to use GNU screen to avoid synchronous scripts
 
 on apt-get install:
 
@@ -99,6 +96,7 @@ insert into private.items (iditem, description, owner, v) values ('f13d7164-e483
 
 	ec2:
 	 - cost calculator (use scale model, not simple javascripts)
+	SDB & SQS endpoints based on WSDL location
 
 X	DONE
 X  - install plproxy and get that working
@@ -576,4 +574,32 @@ X no	another queue for updating template status details?
 X	http://queue.amazonaws.com/doc/2009-02-01/QueueService.wsdl
 X test	write SQS facade
 X no	configure whether or not to stop things on error in a queue worker
+X	scheduler not firing 
+X	unhandked runtime exception at List<Message> messages = sqsService.receiveMessages(queueName, 100);?
+X	write proper persistence layer - otherwise cmdline will be impossible
+X test	fix stacktraces
+X java.lang.NullPointerException
+X	at java.util.Hashtable.put(Hashtable.java:394)
+X	at net.ex337.postgrec2.queue.impl.AbstractQueueService.addExceptionToQueue(AbstractQueueService.java:26)
+X	at net.ex337.postgrec2.queue.impl.QueueServiceSQSImpl$WorkerExecutor.run(QueueServiceSQSImpl.java:130)
+X	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+X	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+X	at java.lang.Thread.run(Thread.java:619)
+X	java.lang.NullPointerException
+X	at net.ex337.postgrec2.impl.workers.CreateTemplateFailure.processError(CreateTemplateFailure.java:26)
+X	at net.ex337.postgrec2.impl.workers.ProcessErrorQueue.processMessage(ProcessErrorQueue.java:68)
+X	at net.ex337.postgrec2.queue.impl.QueueServiceSQSImpl$WorkerExecutor.run(QueueServiceSQSImpl.java:109)
+X	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+X	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+Xtest	clean up exceptions & create proper system
+X	create proper exception class hierarchy
+X test	create handler to dump request, so I can relaunch
+X test	create test harness
+X test	schedule stuff with spring, not with my own executors
+X	write SDB facade
+X	test	chunking needs to take into account escape sizes for the following;	
+X	test        {"quot", "34"}, // " - double-quote
+X	test        {"amp", "38"}, // & - ampersand
+X	test        {"lt", "60"}, // < - less-than
+X	test        {"gt", "62"}, // > - greater-than
 
