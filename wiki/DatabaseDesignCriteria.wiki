@@ -7,7 +7,7 @@
 
 Normal database partitioning can only be done on database schemas that have certain properties. For example, social networks generally have a large and highly interconnected graph at the centre of their data model, which cannot be easily partitioned. It follows that schemas such as these that can't be partitioned manually, can't be partitioned by this system either.
 
-In addition to that, there are other criteria that have to be followed in order for the process to work correctly, and for the system to return correct results regardless of the number of partitions. Some of these principles are standard good practise, and some of them are a bit more demanding.
+In addition to that, there are other criteria that have to be followed in order for the process to work correctly, and for the system to return correct results regardless of the number of partitions. Some of these principles are standard good practice, and some of them are a bit more demanding.
 
 == Principle 1: the partition key has a wide and pseudo-random^[0]^ distribution throughout the key-space, and joins do not cross partitions ==
 
