@@ -1,0 +1,104 @@
+
+
+# Installing the sample database schema #
+
+The following packages need to be installed:
+
+  1. PL/Proxy, v2.0.8
+  1. plpythonu (and therefore a recent 2.5-series Python package)
+  1. dblink, installed via the customized script included in the package
+
+As of writing, PL/Proxy several small patches applied to it, and so generally needs to be installed from source, which also then requires make, flex, bison, and the development extensions to PostgreSQL. Under Debian-based systems such as Ubuntu, assuming PostgreSQL and Python is already installed, then this would be an example installation.
+
+```
+#installs dblink, plpython, and the pre-requisites for PL/Proxy:
+sudo apt-get install make flex bison postgresql-server-dev-8.3 postgresql-contrib-8.3 postgresql-plpython-8.3
+
+#installs PL/Proxy
+wget http://pgfoundry.org/frs/download.php/2053/plproxy-2.0.8.tar.gz
+tar -xvf plproxy-2.0.8.tar.gz
+cd plproxy-2.0.8
+#patches to add functionality and fix bugs (do this for 2.0.8 ONLY)
+#must be in this order
+patch -p1 < ../hotrepart/patches/plproxy-select-paren.patch
+patch -p1 < ../hotrepart/patches/plproxy-select-func-dot.patch
+patch -p0 < ../hotrepart/patches/connect.2.0.8.patch
+patch -p0 < ../hotrepart/patches/connstr_params.patch
+make
+sudo make install
+```
+
+Next, you need to ensure that pg\_dump and psql are on the command line. The backup & restore procedure uses the unix tools and piping syntax, so they probably won't work on Windows. Also, the user used by postgresql must have the rights necessary to create, backup and restore a database.
+
+Next we need to create two databases. We're assuming you use the 'postgres' user.
+
+We first execute the following from inside the directory containing the extracted files:
+
+```
+# create the databases
+createdb items0 -U postgres
+createdb items_proxy -U postgres
+# install dblink
+psql items_proxy -U postgres -f sql/modified.dblink.sql
+psql items0 -U postgres -f sql/modified.dblink.sql
+
+# install the proxy
+psql items_proxy -U postgres -f sql/items_proxy.sql
+
+# randomise the dollar-quoting string constants in items0.sql.unsafe
+# to avoid SQL-injection problems
+chmod +x safe.py
+./safe.py
+# install the database
+psql items0 -U postgres -f sql/items0.safe.sql
+```
+
+Once this is done, connect to the "items\_proxy" database and insert the initial configuration data:
+
+```
+
+/* configuration data */
+
+insert into plproxy.config (proxy_connstr, partition_pass, cluster_version) 
+values (
+
+	/* connection string to items_proxy, used for dblink loopback */
+	'dbname=items_proxy host=localhost user=postgres password=postgres',
+
+	/* password of user under which items0 postgres process runs*/
+	'postgres',
+
+	/*cluster version*/
+	1
+
+);
+
+/* initial partition*/
+
+insert into plproxy.partitions (name, 
+		read_start, read_end, 
+		write_start, write_end, 
+		connstr, status) values 
+	('items', 
+	'00000000-0000-0000-0000-000000000000',
+	'ffffffff-ffff-ffff-ffff-ffffffffffff',
+	'00000000-0000-0000-0000-000000000000',
+	'ffffffff-ffff-ffff-ffff-ffffffffffff',
+	'dbname=items0 host=localhost user=postgres password=postgres',
+	'A');
+	
+```
+
+# Testing the installation #
+
+The load testing tool also has a 'test' mode that runs a simple test against the sample database. Installation and setup are documented in LoadTesting.
+
+# Useful SQL commands for testing #
+
+```
+--shows the cluster configuration
+select * from plproxy.partitions
+
+--splits a specified range
+select plproxy.split_partition(1);
+```

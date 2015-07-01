@@ -1,0 +1,17 @@
+
+
+# Goals #
+
+  * Adapting the code to deploy new partitions on EC2 instances. Currently, the new partition runs on the same host as the existing database.
+  * Building a plugin for monitoring software such as [Nagios](http://www.nagios.org/) to automatically trigger repartitioning under extended periods of high load.
+  * Adapting the stress tester to run on multiple hosts and collate telemetry on a single console.
+
+# Task list #
+
+  * the new DB should be brought up on a new EC2 instance.
+  * conditional on performance, should the current table-based queue replication of writes be replaced with something from e.g. slony?
+  * Add PGBouncer installation to the docs, since a production environment would need this.
+
+# Todos #
+
+Detailed todos are listed in hotrepart.todo in the subversion trunk.

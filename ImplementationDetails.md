@@ -1,0 +1,58 @@
+
+
+# How online repartitioning implemented in the sample database schema #
+
+This page explains the high-level design choices made in the implementing the online repartitioning process in the sample database schema. The below text will make much more sense if you've already read RepartitioningProccess.
+
+## Platform choices ##
+
+The hot repartitioning process is implemented on PostgreSQl using PL/Proxy along with dblink and plpython.
+
+PostgreSQL was chosen because it was open source, and has PL/Proxy, which is a relatively flexible, light, production-quality tool. The only other database I investigated was MySQL, but MySQLProxy, which, although far more flexible, is alpha-quality and lacks the ability to reconfigure the proxy to use new databases at runtime.
+
+The FIFO queue is a simple table, which is emptied after being read. This was done for the sake of simplicity. The process described in RepartitioningProcess requires not only the ability to create, read from and destroy a queue, but also it must be able to assert that a queue is empty, and 'sip' from the queue. The easiest way to do this from inside a stored procedure is to implement the queue in SQL.
+
+## Database schema ##
+
+The sample DB installation initially consists of two databases, one for the proxy and one for the actual database itself. Inside each database, the code is organised using schemas as a form of namespace to divide code by function.
+
+```
+items_proxy
+  +- public       <- The public facing interface of the database schema.
+  +- private      <- The internal proxy logic.
+  +- plproxy      <- System tables for PL/Proxy and repartitioning logic.
+  +- dblink       <- Stores dblink functions.
+
+items
+  +- private      <- Actual data storage (accessed through API identical to items_proxy.private)
+  +- partitions   <- Queue logic and tables, backup/restore code.
+  +- dblink       <- Stores dblink functions.
+```
+The reason that the queueing logic is implemented at the data storage level is because the write is stored in the queue in the form of an 'insert' or 'update' statement. Although moving the queueing logic to items\_proxy would consolidate all repartitioning logic in one database, it also makes sense to keep all code directly referencing the storage structure in the same database.
+
+The backup/restore code is currently a three-line PL/python procedure that dumps the current database and restores it to a new one.
+
+All dblink functions are stored in a separate schema. The standard dblink installation script has been modified to to this, and is included in the release.
+
+The SQL files that define both database are heavily commented, so each piece of code is well-explained. However, a walk-through of the path a read takes through the above databases would be helpful:
+
+  1. A read arrives from a client at items\_proxy.public.
+  1. The function in items\_proxy.public computes which partition(s) the read must run on by executing a select query against plproxy.partitions, and calls the private function with the partion connection strings as arguments. Also included in the call to the private function is the range information for the target partition.
+  1. The private function then proxies the procedure call to the target partition.
+  1. The read arrives at the items.private database, where it's executed against the database, and the results travel back through the proxy.
+
+Writes are similar, except that a write may enter a spinlock at step 2, must only be executed on one partition, and may also copy the write statement to a queue at step 4.
+
+## Repartitioning process ##
+
+The repartitioning process itself is implemented as a PL/PgSQL stored procedure, with dblink used as a control channel by the proxy to the old and new partitions. Because we use 128-bit numbers there's a bit of large decimal maths, which is done in PL/Python.
+
+At two points in the process it's necessary to make changes with immediate effect inside of a PL/PgSQL function. Because transactions inside PL/PgSQL functions aren't possible, a loop-back dblink has to be used for this, even though it's a disgusting hack.
+
+When the 'write queue' is initally read from, before the partition table is updated for the first time, it is still being written to by the old partition. For this reason the read loop cannot use the emptiness of the queue as the test to break the read loop.
+
+
+---
+
+
+The source code is of course the best and most accurate description of the implementation. [Installing and running the sample database schema is documented here.](DatabaseInstallation.md)

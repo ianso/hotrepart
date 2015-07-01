@@ -1,0 +1,85 @@
+
+
+# How the repartitioning process works #
+
+This page describes how the sample database is set up, and how it repartitions as needed. If you haven't read DatabaseDesignCriteria already, it would be a good idea, as this page will make more sense having read it.
+
+# Initial setup #
+
+The database is accessed via a proxy. The proxy forwards requests to the correct partition, or to all partitions if it's a query that retrieves a series of records.
+
+![http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep1.gif](http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep1.gif)
+
+The proxy decides which partition(s) to forward requests to based on an internal table, which splits the partition keyspace into ranges, and has one database per range. For reasons that will become clear below, each row has a "status" column, and ranges are specified separately for reads and writes. (The UUID ranges have been shortened for readability.)
+
+| Range ID | Read range start | Read range end | Write range start | Write range end | Database | Status |
+|:---------|:-----------------|:---------------|:------------------|:----------------|:---------|:-------|
+| 1        | 000              | 7fe            | 000               | 7fe             | dbname=items1 host=10.0.0.1 user=items | Active |
+| 2        | 7ff              | fff            | 7ff               | fff             | dbname=items2 host=10.0.0.2 user=items | Active |
+
+# Re-partitioning #
+
+The call comes through and we decide to repartition range 1. In this case we're going to divide the range equally.
+
+The procedure is as follows:
+
+1) We create a FIFO queue for all SQL writes that fall within the range of the new partition. From this point onwards, the database copies all successful writes for that range into the queue.
+
+2) We create the new partition by backing-up and restoring the current database containing the range for this new partition, and deleting data outside the range.
+
+3) We then apply the contents of the FIFO queue to the new database.
+
+![http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep2.gif](http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep2.gif)
+
+4) A new range is added to the proxy lookup table, and the original range row is updated for writes only.
+
+| Range ID | Read range start | Read range end | Write range start | Write range end | Database | Status |
+|:---------|:-----------------|:---------------|:------------------|:----------------|:---------|:-------|
+| 1        | 000              | 7fe            | 000               | 3fe             | dbname=items1 host=10.0.0.1 user=items | Active |
+| 2        | 7ff              | fff            | 7ff               | fff             | dbname=items2 host=10.0.0.2 user=items | Active |
+| 3        | null             | null           | 3ff               | 7fe             | dbname=items3 host=10.0.0.3 user=items | **Disabled** |
+
+The new range has status disabled. The status is used by write calls at the proxy level, which enter a spinlock when no active partition is available to write to. Because the read range start and end are both null, no reads will be executed against this partition.
+
+![http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep3.gif](http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep3.gif)
+
+5) Any writes remaining in the FIFO queue that have accumulated between the end of step 3 and the commit at the end of step 4 are applied to the new database.
+
+6) The proxy lookup table is updated again to its final state:
+
+| Range ID | Read range start | Read range end | Write range start | Write range end | Database | Status |
+|:---------|:-----------------|:---------------|:------------------|:----------------|:---------|:-------|
+| 1        | 000              | 3fe            | 000               | 3fe             | dbname=items1 host=10.0.0.1 user=items | Active |
+| 2        | 7ff              | fff            | 7ff               | fff             | dbname=items2 host=10.0.0.2 user=items | Active |
+| 3        | 3ff              | 7fe            | 3ff               | 7fe             | dbname=items3 host=10.0.0.3 user=items | Active |
+
+![http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep4.gif](http://hotrepart.googlecode.com/svn/wikigraphics/RepartitioningProcessStep4.gif)
+
+7) At this point the repartition is complete. The FIFO queue should be confirmed empty and disposed of.
+
+# Notes on the process #
+
+The total time from step 4 to step 6 has to be kept as small as possible to avoid locking a large number of writes.
+
+The reason for having a read and a write queue is because if they're both updated at the same time, we have the choice of either blocking reads as well as writes, or allowing reads from a new partition that may not have the tail-end of the queue applied to it post-lock.
+
+The process can be simply explained as:
+
+  1. Create the queue and start feeding it
+  1. Backup & partially restore the database to create a new partition
+  1. Apply the queue to the new database
+  1. Update and lock the write proxy
+  1. Apply the tail of the queue
+  1. Update the read proxy and unlock the write proxy
+
+This process is quite flexible, and could also be used to up/down-grade an entire database in-place, or upgrade to a new schema without disrupting access.
+
+For example, with modification to step 2, 4 and 6, this same process could also be used for moving an entire partition from one server to another, for example to updgrade or downgrade hardware.
+
+Likewise, with modification of step 2, it should also be possible to consolidate partitions onto one host or one schema - in effect, departitioning.
+
+If the new partition is modified after being restored, but before being brought online, then the database has effectively been migrated at runtime. Backwards-compatible migrations could be performed on a per-partition basis.
+
+If the schema modification in the migration is not backwards-compatible, then the writes being saved to the queue would need to reference to the new database schema.
+
+With the process explained, the page ImplementationDetails explains how it works in practise, which is considerably more hairy than in theory.
